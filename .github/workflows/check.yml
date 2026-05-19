@@ -1,0 +1,29 @@
+name: Check
+
+on:
+  push:
+    branches: ['main']
+    paths-ignore: ['*.md', 'LICENSE']
+  pull_request:
+    branches: ['main']
+    paths-ignore: ['*.md', 'LICENSE']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+# Key-free CI: validates the package compiles and bundles. Does not build or
+# sign an .s9pk (that requires a developer key and is done locally / on release).
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Type check
+        run: npm run check
+      - name: Bundle build
+        run: npm run build
