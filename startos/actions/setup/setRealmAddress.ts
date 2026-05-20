@@ -1,7 +1,7 @@
 import { sdk } from '../../sdk'
 import { i18n } from '../../i18n'
 import { storeJson } from '../../fileModels/store.json'
-import { resolveRealmHost } from '../../utils'
+import { resolveRealmHost, validateRealmAddress } from '../../utils'
 
 const { InputSpec, Value } = sdk
 
@@ -39,7 +39,8 @@ export const setRealmAddress = sdk.Action.withInput(
     return { realmAddress: value }
   },
   async ({ effects, input }) => {
-    await storeJson.merge(effects, { realmAddress: input.realmAddress.trim() })
+    const realmAddress = validateRealmAddress(input.realmAddress)
+    await storeJson.merge(effects, { realmAddress })
     await effects.restart()
     return {
       version: '1' as const,
@@ -49,7 +50,7 @@ export const setRealmAddress = sdk.Action.withInput(
       ),
       result: {
         type: 'single' as const,
-        value: `set realmlist ${input.realmAddress.trim()}`,
+        value: `set realmlist ${realmAddress}`,
         copyable: true,
         qr: false,
         masked: false,

@@ -1,14 +1,14 @@
-// Auth server — WoW client connects here first for login + realm list.
+// Auth server, WoW client connects here first for login + realm list.
 export const authPort = 3724
 
-// World server — the actual game server the client connects to after auth.
+// World server, the actual game server the client connects to after auth.
 export const worldPort = 8085
 
-// SOAP API on the worldserver — used for remote console commands
+// SOAP API on the worldserver, used for remote console commands
 // (account creation, GM level, etc.). Bound to localhost only.
 export const soapPort = 7878
 
-// MySQL — internal only, never exposed as an interface.
+// MySQL, internal only, never exposed as an interface.
 export const dbPort = 3306
 
 // Database connection constants (internal localhost between subcontainers).
@@ -19,19 +19,44 @@ export const dbName = {
   auth: 'acore_auth',
   world: 'acore_world',
   characters: 'acore_characters',
+  playerbots: 'acore_playerbots',
+} as const
+
+// Default playerbots settings (playerbots variant). Referenced by the store
+// schema fallback and the configure-playerbots action prefill.
+export const PLAYERBOTS_DEFAULTS = {
+  enabled: true,
+  minBots: 20,
+  maxBots: 40,
 } as const
 
 import { T } from '@start9labs/start-sdk'
 import { sdk } from './sdk'
 
+// A realm address must be a plain IPv4/IPv6 literal or DNS hostname. Reject
+// anything outside this charset so it can't break out of the SQL string it's
+// interpolated into in main.ts.
+const realmAddressPattern = /^[A-Za-z0-9.:-]+$/
+
+export function validateRealmAddress(value: string): string {
+  const trimmed = value.trim()
+  if (!realmAddressPattern.test(trimmed)) {
+    throw new Error(
+      'Invalid realm address: only letters, digits, dots, colons, and hyphens are allowed.',
+    )
+  }
+  return trimmed
+}
+
 // Resolve the realm address: an explicit user choice (store.realmAddress) wins;
 // otherwise auto-pick a non-local IPv4. With multiple networks (LAN + tunnel)
-// the auto-pick may be wrong — that's what the override is for.
+// the auto-pick may be wrong, that's what the override is for.
 export async function resolveRealmHost(
   effects: T.Effects,
   override?: string,
 ): Promise<string> {
-  if (override && override.trim()) return override.trim()
+  const chosen = override?.trim()
+  if (chosen) return chosen
   const iface = await sdk.serviceInterface.getOwn(effects, 'authserver').once()
   const addr = iface?.addressInfo
   if (!addr) return '127.0.0.1'

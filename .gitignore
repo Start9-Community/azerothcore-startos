@@ -7,3 +7,7 @@ docker-images
 javascript
 ncc-cache
 .claude/
+startos/variant.gen.ts
+
+# Generated from instructions.<variant>.md by scripts/gen-variant.js
+instructions.md

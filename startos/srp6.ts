@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 
-// AzerothCore SRP6 registration crypto, pure-JS (BigInt) — no native deps.
+// AzerothCore SRP6 registration crypto, pure-JS (BigInt), no native deps.
 //   N = 256-bit safe prime, g = 7, hash = SHA1
 //   h1 = SHA1(UPPER(user) : UPPER(pass))
 //   h2 = SHA1(salt || h1)                       (salt = 32 random bytes)

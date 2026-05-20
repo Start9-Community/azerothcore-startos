@@ -5,7 +5,7 @@ import { authPort, worldPort } from './utils'
 // WoW 3.3.5 uses a raw TCP protocol (not HTTP), so it cannot run over Tor.
 // Both interfaces are p2p / LAN+clearnet only, like a game server.
 export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
-  // Auth server — the address players put in realmlist.wtf.
+  // Auth server, the address players put in realmlist.wtf.
   const authMulti = sdk.MultiHost.of(effects, 'auth-multi')
   const authOrigin = await authMulti.bindPort(authPort, {
     protocol: null,
@@ -26,7 +26,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   })
   const authReceipt = await authOrigin.export([authInterface])
 
-  // World server — clients connect here after auth hands off the realm.
+  // World server, clients connect here after auth hands off the realm.
   const worldMulti = sdk.MultiHost.of(effects, 'world-multi')
   const worldOrigin = await worldMulti.bindPort(worldPort, {
     protocol: null,
