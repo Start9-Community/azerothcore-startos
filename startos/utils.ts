@@ -4,30 +4,14 @@ export const authPort = 3724
 // World server, the actual game server the client connects to after auth.
 export const worldPort = 8085
 
-// SOAP API on the worldserver, used for remote console commands
-// (account creation, GM level, etc.). Bound to localhost only.
-export const soapPort = 7878
-
 // MySQL, internal only, never exposed as an interface.
 export const dbPort = 3306
 
-// Database connection constants (internal localhost between subcontainers).
-export const dbHost = '127.0.0.1'
-export const dbUser = 'root'
-// Generated once at install in initializeService and stored in store.json.
+// The three core databases AzerothCore uses.
 export const dbName = {
   auth: 'acore_auth',
   world: 'acore_world',
   characters: 'acore_characters',
-  playerbots: 'acore_playerbots',
-} as const
-
-// Default playerbots settings (playerbots variant). Referenced by the store
-// schema fallback and the configure-playerbots action prefill.
-export const PLAYERBOTS_DEFAULTS = {
-  enabled: true,
-  minBots: 20,
-  maxBots: 40,
 } as const
 
 import { T } from '@start9labs/start-sdk'
@@ -70,12 +54,4 @@ export async function resolveRealmHost(
   if (ipv4s[0]) return ipv4s[0]
   const any = addr.nonLocal.hostnames[0]?.hostname
   return any ?? '127.0.0.1'
-}
-
-// All reachable hostnames for the auth interface (for display + selection).
-export async function listRealmHosts(effects: T.Effects): Promise<string[]> {
-  const iface = await sdk.serviceInterface.getOwn(effects, 'authserver').once()
-  const addr = iface?.addressInfo
-  if (!addr) return []
-  return addr.hostnames.map((h) => h.hostname)
 }

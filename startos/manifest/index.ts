@@ -1,19 +1,10 @@
 import { setupManifest } from '@start9labs/start-sdk'
-import {
-  longDescription,
-  longDescriptionPlayerbots,
-  shortDescription,
-  shortDescriptionPlayerbots,
-} from './i18n'
-import { isPlayerbots, packageId, packageTitle } from '../variant'
+import { longDescription, shortDescription } from './i18n'
 
-// Vanilla references AzerothCore's official prebuilt images (acore/ac-wotlk-*).
-// Playerbots compiles the mod-playerbots fork from source via Dockerfile.playerbots
-// into one consolidated image ('acore') that serves auth/world/db-import roles.
-//
-// Images are pinned to immutable digests for reproducible builds. The source tag
-// for the acore images was 16.0.0-dev at pin time; when bumping the upstream
-// version, re-resolve these with `docker buildx imagetools inspect <ref>`.
+// AzerothCore's official prebuilt images (acore/ac-wotlk-*). Pinned to immutable
+// digests for reproducible builds. The source tag for the acore images was
+// 16.0.0-dev at pin time; when bumping the upstream version, re-resolve these
+// with `docker buildx imagetools inspect <ref>`.
 const MYSQL =
   'mysql:8.4@sha256:c36050afdca850f23cef85703f84c7531a5ae155a11b5ee1c60acb09937c4084'
 const AC_AUTHSERVER =
@@ -27,43 +18,28 @@ const AC_CLIENT_DATA =
 
 const ARCH_X86: ['x86_64'] = ['x86_64']
 
-const vanillaImages = {
-  database: { source: { dockerTag: MYSQL }, arch: ARCH_X86 },
-  authserver: { source: { dockerTag: AC_AUTHSERVER }, arch: ARCH_X86 },
-  worldserver: { source: { dockerTag: AC_WORLDSERVER }, arch: ARCH_X86 },
-  'db-import': { source: { dockerTag: AC_DB_IMPORT }, arch: ARCH_X86 },
-  'client-data': { source: { dockerTag: AC_CLIENT_DATA }, arch: ARCH_X86 },
-}
-
-const playerbotsImages = {
-  database: { source: { dockerTag: MYSQL }, arch: ARCH_X86 },
-  // One consolidated fork image for auth + world + db-import.
-  acore: {
-    source: { dockerBuild: { dockerfile: './Dockerfile.playerbots' } },
-    arch: ARCH_X86,
-  },
-  // The client-data downloader is version-agnostic, reuse the official one.
-  'client-data': { source: { dockerTag: AC_CLIENT_DATA }, arch: ARCH_X86 },
-}
-
 export const manifest = setupManifest({
-  id: packageId,
-  title: packageTitle,
+  // Shared with the Playerbots flavor (Start9-Community/azerothcore-startos,
+  // `playerbots` branch) so a user can switch flavors in place, keeping their
+  // world and characters.
+  id: 'azerothcore',
+  title: 'AzerothCore',
   license: 'MIT',
-  packageRepo: 'https://github.com/kwsantiago/azerothcore-startos',
-  upstreamRepo: isPlayerbots
-    ? 'https://github.com/mod-playerbots/azerothcore-wotlk'
-    : 'https://github.com/azerothcore/azerothcore-wotlk',
+  packageRepo: 'https://github.com/Start9-Community/azerothcore-startos',
+  upstreamRepo: 'https://github.com/azerothcore/azerothcore-wotlk',
   marketingUrl: 'https://www.azerothcore.org/',
   donationUrl: 'https://www.azerothcore.org/#donate',
   description: {
-    short: isPlayerbots ? shortDescriptionPlayerbots : shortDescription,
-    long: isPlayerbots ? longDescriptionPlayerbots : longDescription,
+    short: shortDescription,
+    long: longDescription,
   },
   volumes: ['main'],
-  // Cast to the intersection so the manifest's image-id type spans every id
-  // either variant can use; only the active variant's ids are referenced.
-  images: (isPlayerbots ? playerbotsImages : vanillaImages) as typeof vanillaImages &
-    typeof playerbotsImages,
+  images: {
+    database: { source: { dockerTag: MYSQL }, arch: ARCH_X86 },
+    authserver: { source: { dockerTag: AC_AUTHSERVER }, arch: ARCH_X86 },
+    worldserver: { source: { dockerTag: AC_WORLDSERVER }, arch: ARCH_X86 },
+    'db-import': { source: { dockerTag: AC_DB_IMPORT }, arch: ARCH_X86 },
+    'client-data': { source: { dockerTag: AC_CLIENT_DATA }, arch: ARCH_X86 },
+  },
   dependencies: {},
 })

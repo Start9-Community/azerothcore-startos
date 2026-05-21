@@ -1,13 +1,12 @@
 {
   "name": "azerothcore-startos",
   "scripts": {
-    "gen": "node scripts/gen-variant.js",
-    "build": "npm run gen && rm -rf ./javascript && ncc build startos/index.ts -o ./javascript",
+    "build": "rm -rf ./javascript && ncc build startos/index.ts -o ./javascript",
     "prettier": "prettier --write startos",
-    "check": "npm run gen && tsc --noEmit"
+    "check": "tsc --noEmit"
   },
   "dependencies": {
-    "@start9labs/start-sdk": "1.5.2",
+    "@start9labs/start-sdk": "1.5.3",
     "mysql2": "^3.22.3"
   },
   "devDependencies": {
@@ -21,24 +20,5 @@
     "tabWidth": 2,
     "semi": false,
     "singleQuote": true
-  },
-  "version": "1.1.0",
-  "description": "StartOS package for AzerothCore, a WoW 3.3.5a (Wrath of the Lich King) server emulator.",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/kwsantiago/azerothcore-startos.git"
-  },
-  "keywords": [
-    "wow",
-    "azerothcore",
-    "wotlk",
-    "startos"
-  ],
-  "author": "kwsantiago",
-  "license": "MIT",
-  "type": "commonjs"
+  }
 }

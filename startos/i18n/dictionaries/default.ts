@@ -50,21 +50,6 @@ const dict = {
   'The address (LAN IP or hostname) game clients connect to. For home LAN play use your local 192.168.x.x address. Check the Connection Info action to see all available addresses.': 86,
   'Realm Address Updated': 87,
   'The server is restarting. Set your client realmlist.wtf to this same address.': 88,
-
-  // configurePlayerbots.ts
-  'Enable Playerbots': 90,
-  'Populate the world with AI players. Turn off for a vanilla (empty) server.': 91,
-  'Minimum Random Bots': 92,
-  'Lower bound of the random bot population.': 93,
-  'Maximum Random Bots': 94,
-  'Upper bound of the random bot population. More bots = more RAM (~10-20MB each).': 95,
-  'Playerbots Settings': 96,
-  'Enable/disable AI players and tune the bot population': 97,
-  'Saving restarts the server.': 98,
-  'Playerbots Settings Updated': 99,
-  'Bots enabled. The server is restarting.': 100,
-  'Bots disabled, vanilla mode. The server is restarting.': 101,
-  'Minimum was higher than maximum, so the values were swapped.': 102,
 } as const
 
 export type LangDict = Record<keyof typeof dict, string>

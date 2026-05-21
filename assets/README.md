@@ -1,3 +1,1 @@
-# Assets
-
-Static assets bundled into the package (none required for vanilla).
+Use the `/assets` directory to include additional files or scripts needed by your service.

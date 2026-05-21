@@ -16,25 +16,12 @@ auth server, world server, and a MySQL database, auto-downloads client map data,
 and auto-configures the realm address for LAN play. You bring your own clean
 3.3.5a game client.
 
----
-
-## Variants
-
-This repo builds two separate packages from one codebase (selected at build time
-by `VARIANT`):
-
-| Package | id | Core | Arch | Notes |
-| --- | --- | --- | --- | --- |
-| **AzerothCore** (vanilla) | `azerothcore` | Stock AzerothCore (official prebuilt images) | x86_64 | Lightweight; empty world unless friends join |
-| **AzerothCore — Playerbots** | `azerothcore-playerbots` | [mod-playerbots](https://github.com/mod-playerbots/azerothcore-wotlk) fork, compiled from source | x86_64 | World populated with AI players; bots toggleable |
-
-They install as distinct packages. The Playerbots edition adds a **Playerbots
-Settings** action (enable/disable bots, tune population); turning bots off makes
-it behave like vanilla. **Don't run both at once** on the same server — they
-share ports 3724/8085.
-
-Build: `make` (vanilla) or `make playerbots`. Both editions are x86_64 only. See
-[CONTRIBUTING.md](CONTRIBUTING.md).
+This package shares the `azerothcore` package id with the **Playerbots flavor**
+(the [`playerbots` branch](https://github.com/Start9-Community/azerothcore-startos/tree/playerbots),
+which runs the [mod-playerbots](https://github.com/mod-playerbots/azerothcore-wotlk)
+fork and populates the world with AI players). They are mutually exclusive — pick
+one flavor in the marketplace; StartOS lets you switch between them in place,
+preserving your world and characters.
 
 ---
 
@@ -59,21 +46,20 @@ Build: `make` (vanilla) or `make playerbots`. Both editions are x86_64 only. See
 
 ## Image and Container Runtime
 
+All images are AzerothCore's official prebuilt images, pinned to immutable
+digests in `startos/manifest/index.ts`.
+
 | Image | Role | Source |
 | --- | --- | --- |
-| `database` | MySQL backend (acore_auth, acore_world, acore_characters) | Upstream `mysql:8.4` |
-| `authserver` | Login + realm list | Official `acore/ac-wotlk-authserver`, pinned in `startos/manifest/index.ts` |
-| `worldserver` | Game world server | Official `acore/ac-wotlk-worldserver` |
-| `db-import` | One-shot database initializer | Official `acore/ac-wotlk-db-import` |
-| `client-data` | One-shot map/vmap/mmap/dbc downloader (~1.1GB) | Official `acore/ac-wotlk-client-data` |
-
-In the **Playerbots** edition, `authserver`/`worldserver`/`db-import` are served
-by one consolidated image (`acore`) compiled from the mod-playerbots fork at pack
-time (`Dockerfile.playerbots`); `database` and `client-data` are unchanged.
+| `database` | MySQL backend (acore_auth, acore_world, acore_characters) | `mysql:8.4` |
+| `authserver` | Login + realm list | `acore/ac-wotlk-authserver` |
+| `worldserver` | Game world server | `acore/ac-wotlk-worldserver` |
+| `db-import` | One-shot database initializer | `acore/ac-wotlk-db-import` |
+| `client-data` | One-shot map/vmap/mmap/dbc downloader (~1.1GB) | `acore/ac-wotlk-client-data` |
 
 | Property | Value |
 | --- | --- |
-| Architectures | x86_64 (both editions) |
+| Architectures | x86_64 |
 | Entry command | Upstream entrypoint (`sdk.useEntrypoint()`) for the daemons |
 
 ---
@@ -86,7 +72,7 @@ The package uses a single volume, `main`, with these subpaths:
 | --- | --- | --- |
 | `mysql/` | `/var/lib/mysql` (database) | All three databases |
 | `data/` | `/azerothcore/env/dist/data` (worldserver, client-data) | Maps, vmaps, mmaps, dbc |
-| `start9/store.json` | (package-internal) | DB password, realm name, realm address, client-data flag |
+| `start9/store.json` | (package-internal) | DB password, realm name, realm address |
 
 ---
 
@@ -124,10 +110,9 @@ over Tor. Both interfaces are declared `p2p`.
 
 | Action ID | Purpose | Availability |
 | --- | --- | --- |
-| `get-server-info` | Show the realm address + client connection details | any |
+| `get-server-info` | Show the realm address + client connection details ("Connection Info") | any |
 | `set-realm-address` | Choose which address clients use to reach the world server (needed when the box has multiple networks, e.g. LAN + tunnel) | any |
 | `create-account` | Create a WoW login account (SRP6, written directly to the database) | only-running |
-| `configure-playerbots` | Enable/disable AI players and tune the bot population (**Playerbots edition only**) | any |
 
 ---
 
@@ -168,9 +153,13 @@ None.
 ## Limitations and Differences
 
 1. **LAN / clearnet only** — no Tor (raw TCP game protocol).
-2. **Two editions** — the vanilla package has an empty world unless friends on your network join; the [Playerbots edition](#variants) populates it with AI players (toggleable). Only one can run per server (shared ports).
+2. **Empty world** — this vanilla flavor has no AI players, so the world is
+   unpopulated unless friends on your network join. The
+   [Playerbots flavor](https://github.com/Start9-Community/azerothcore-startos/tree/playerbots)
+   populates it with AI players.
 3. **Bring your own client** — the game client is copyrighted and not bundled.
-4. Use a **clean 3.3.5a client** — modified clients (custom DBC) can show "Filler text" / broken quests from client-server data mismatch.
+4. Use a **clean 3.3.5a client** — modified clients (custom DBC) can show "Filler
+   text" / broken quests from client-server data mismatch.
 5. The interactive worldserver console is disabled (`AC_CONSOLE_ENABLE=0`) so logs stay clean.
 
 ---
@@ -184,7 +173,8 @@ None.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for local build, install, and release details.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local build, install, and the
+two-flavor branch model.
 
 ---
 
@@ -200,12 +190,13 @@ The software it installs and runs, **AzerothCore**, is licensed separately under
 
 ```yaml
 package_id: azerothcore
+flavor: vanilla            # sibling flavor: #playerbots: (playerbots branch)
 architectures: [x86_64]
 volumes:
   main:
     mysql: /var/lib/mysql                    # database container
     data: /azerothcore/env/dist/data         # worldserver + client-data
-    store: start9/store.json                 # dbPassword, realmName, realmAddress, clientDataReady
+    store: start9/store.json                 # dbPassword, realmName, realmAddress
 ports:
   authserver: 3724    # realmlist target
   worldserver: 8085   # game world
@@ -220,5 +211,4 @@ account_creation: direct DB insert with SRP6 (salt + verifier), no SOAP
 notes:
   - LAN/clearnet only (raw TCP, no Tor)
   - clean 3.3.5a client required, not bundled
-  - two editions: azerothcore (vanilla) and azerothcore-playerbots (AI players, x86_64 only)
 ```

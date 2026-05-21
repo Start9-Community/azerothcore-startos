@@ -33,8 +33,10 @@ copyrighted). Then:
   port forwarding for ports 3724 (auth) and 8085 (world) yourself.
 - **Use a clean client.** Modified clients (custom DBC files) can show "Filler
   text" on NPCs and broken quests due to client/server data mismatch.
-- The server runs vanilla AzerothCore — no playerbots in this edition, so the
-  world is unpopulated unless you invite friends on your network.
+- The server runs **vanilla AzerothCore** — no AI players, so the world is
+  unpopulated unless you invite friends on your network. For a populated world,
+  install the **Playerbots flavor** instead (same package — you can switch in
+  place, keeping your world and characters).
 
 ## Backups
 
@@ -47,5 +49,6 @@ volume. Restore re-creates the realm exactly as it was.
   Connection Info action exactly, and that your client is version 3.3.5a.
 - **World Server stuck "loading"**: first-boot client-data download in progress;
   give it a few minutes.
-- **Account creation fails**: ensure the World Server health check is green
-  (SOAP requires the world server to be fully running).
+- **Account creation fails**: the **Create Account** action only works while the
+  server is running — wait for the World Server health check to go green, then
+  try again.
