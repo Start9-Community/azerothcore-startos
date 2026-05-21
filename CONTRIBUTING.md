@@ -70,9 +70,10 @@ Promotion to `beta` and `prod` is a separate, manual step.
 
 ## Architecture notes
 
-The boot sequence (MySQL → client-data → db-import → realm-config → auth +
-world) uses StartOS `addDaemon`/`addOneshot` with `requires` ordering in
-`startos/main.ts`. The realm address is resolved in `startos/utils.ts`
+The boot sequence uses StartOS `addDaemon`/`addOneshot` with `requires` ordering
+in `startos/main.ts` (MySQL → client-data → db-import → realm-config → auth +
+world; the Playerbots flavor adds a `create-dbs` one-shot before `db-import`
+because the fork only auto-creates the first database). The realm address is resolved in `startos/utils.ts`
 (`resolveRealmHost`) and can be overridden via the **Set Realm Address** action.
 Account creation computes the SRP6 salt/verifier in `startos/srp6.ts` (pure JS,
 no native deps) and inserts directly into `acore_auth` via `startos/db.ts` —

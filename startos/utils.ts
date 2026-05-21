@@ -7,11 +7,21 @@ export const worldPort = 8085
 // MySQL, internal only, never exposed as an interface.
 export const dbPort = 3306
 
-// The three core databases AzerothCore uses.
+// The core databases AzerothCore uses. The Playerbots flavor adds a fourth
+// (acore_playerbots) for the mod-playerbots fork.
 export const dbName = {
   auth: 'acore_auth',
   world: 'acore_world',
   characters: 'acore_characters',
+  playerbots: 'acore_playerbots',
+} as const
+
+// Default playerbots settings. Referenced by the store schema fallback and the
+// configure-playerbots action prefill.
+export const PLAYERBOTS_DEFAULTS = {
+  enabled: true,
+  minBots: 20,
+  maxBots: 40,
 } as const
 
 import { T } from '@start9labs/start-sdk'

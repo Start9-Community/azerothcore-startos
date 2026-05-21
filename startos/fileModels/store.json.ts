@@ -1,5 +1,6 @@
 import { z, FileHelper } from '@start9labs/start-sdk'
 import { sdk } from '../sdk'
+import { PLAYERBOTS_DEFAULTS } from '../utils'
 
 export const defaultRealmName = 'AzerothCore'
 
@@ -14,6 +15,15 @@ const storeConfigSchema = z.object({
   // world server). Empty = auto-resolve a non-local IPv4. Set via the
   // "Set Realm Address" action when a box has multiple networks.
   realmAddress: z.string().catch(''),
+  // Playerbots settings. Enabled by default; turning it off makes the server
+  // behave like the vanilla flavor.
+  playerbots: z
+    .object({
+      enabled: z.boolean().catch(PLAYERBOTS_DEFAULTS.enabled),
+      minBots: z.number().int().catch(PLAYERBOTS_DEFAULTS.minBots),
+      maxBots: z.number().int().catch(PLAYERBOTS_DEFAULTS.maxBots),
+    })
+    .catch({ ...PLAYERBOTS_DEFAULTS }),
 })
 
 export type StoreConfig = z.infer<typeof storeConfigSchema>

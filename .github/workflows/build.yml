@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths-ignore: ['*.md']
-    branches: ['main']
+    branches: ['playerbots']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
@@ -14,7 +14,7 @@ jobs:
   build:
     if: github.event.pull_request.draft == false
     uses: start9labs/shared-workflows/.github/workflows/build.yml@master
-    # with:
-    #   FREE_DISK_SPACE: true
+    with:
+      FREE_DISK_SPACE: true # the playerbots fork compiles from source
     secrets:
       DEV_KEY: ${{ secrets.DEV_KEY }}

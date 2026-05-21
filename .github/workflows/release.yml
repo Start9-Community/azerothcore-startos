@@ -9,7 +9,7 @@ jobs:
   release:
     uses: start9labs/shared-workflows/.github/workflows/release.yml@master
     with:
-      # FREE_DISK_SPACE: true
+      FREE_DISK_SPACE: true # the playerbots fork compiles from source
       RELEASE_REGISTRY: ${{ vars.RELEASE_REGISTRY }}
       S3_S9PKS_BASE_URL: ${{ vars.S3_S9PKS_BASE_URL }}
     secrets:
