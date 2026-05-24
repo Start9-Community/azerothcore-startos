@@ -42,6 +42,13 @@ export function validateRealmAddress(value: string): string {
   return trimmed
 }
 
+// Escape a string for safe interpolation into a single-quoted MySQL literal:
+// escape backslashes first, then double single quotes (MySQL's documented
+// string escaping) so it can't break out of the literal passed to `mysql -e`.
+export function sqlString(value: string): string {
+  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "''")}'`
+}
+
 // Resolve the realm address: an explicit user choice (store.realmAddress) wins;
 // otherwise auto-pick a non-local IPv4. With multiple networks (LAN + tunnel)
 // the auto-pick may be wrong, that's what the override is for.

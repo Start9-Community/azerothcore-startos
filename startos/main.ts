@@ -6,6 +6,7 @@ import {
   dbName,
   dbPort,
   resolveRealmHost,
+  sqlString,
   validateRealmAddress,
   worldPort,
 } from './utils'
@@ -89,10 +90,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
     },
   })
 
+  // host is charset-whitelisted by validateRealmAddress (no quotes/backslashes)
+  // and worldPort is a numeric constant. realmName is the only free-text field,
+  // so it's escaped via sqlString before interpolation.
   const realmSql =
     `UPDATE ${dbName.auth}.realmlist ` +
     `SET address='${host}', localAddress='${host}', ` +
-    `port=${worldPort}, name='${store.realmName.replace(/'/g, "''")}' ` +
+    `port=${worldPort}, name=${sqlString(store.realmName)} ` +
     `WHERE id=1;`
 
   const dbReady = {
