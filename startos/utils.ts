@@ -24,6 +24,19 @@ export const PLAYERBOTS_DEFAULTS = {
   maxBots: 40,
 } as const
 
+// Optional gameplay modules compiled into the image, off by default and toggled
+// at runtime via the Modules action. Each maps to an AC_* config override in
+// main.ts (e.g. autoRevive -> AC_AUTO_REVIVE_ENABLE). GM-account-only by design.
+export const MODULE_DEFAULTS = {
+  autoRevive: false,
+  transmog: false,
+  learnSpells: false,
+  individualXp: false,
+  aoeLoot: false,
+  npcBuffer: false,
+  npcEnchanter: false,
+} as const
+
 import { T } from '@start9labs/start-sdk'
 import { sdk } from './sdk'
 

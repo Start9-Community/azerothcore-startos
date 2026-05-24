@@ -35,6 +35,7 @@ flavor.
 - [Installation and First-Run Flow](#installation-and-first-run-flow)
 - [Network Access and Interfaces](#network-access-and-interfaces)
 - [Actions (StartOS UI)](#actions-startos-ui)
+- [Modules](#modules)
 - [Playerbots](#playerbots)
 - [Connecting a Client](#connecting-a-client)
 - [Backups and Restore](#backups-and-restore)
@@ -120,6 +121,28 @@ over Tor. Both interfaces are declared `p2p`.
 | `set-realm-address` | Choose which address clients use to reach the world server (needed when the box has multiple networks, e.g. LAN + tunnel) | any |
 | `create-account` | Create a WoW login account (SRP6, written directly to the database) | only-running |
 | `configure-playerbots` | Enable/disable AI players and tune the bot population | any |
+| `configure-modules` | Enable/disable optional gameplay modules (e.g. Auto-Revive) | any |
+
+---
+
+## Modules
+
+Optional AzerothCore gameplay modules are **compiled into the image** (AC modules
+are static, not runtime-loadable) but ship **off by default**, and the **Modules**
+action toggles them at runtime (saving restarts the server). This keeps the build
+self-contained while letting you enable extras without recompiling.
+
+| Module | Effect | Default |
+| --- | --- | --- |
+| **Auto-Revive** ([mod-auto-revive](https://github.com/azerothcore/mod-auto-revive)) | Instantly revives **GM accounts** on death instead of releasing spirit. Normal players are unaffected. | off |
+| **Transmogrification** ([mod-transmog](https://github.com/azerothcore/mod-transmog)) | Transmog NPC to change gear appearance while keeping stats. | off |
+| **Auto-Learn Spells** ([mod-learn-spells](https://github.com/azerothcore/mod-learn-spells)) | Auto-learn class spells/ranks on level up; skip trainers. | off |
+| **Individual XP Rate** ([mod-individual-xp](https://github.com/azerothcore/mod-individual-xp)) | Each player sets their own XP rate via in-game command. | off |
+| **AoE Loot** ([mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot)) | Loot all nearby corpses at once. | off |
+| **Buff NPC** ([mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer)) | NPC that applies common buffs on demand. | off |
+| **Enchanter NPC** ([mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter)) | NPC that applies enchants to your gear. | off |
+
+(More modules can be added by pinning them in `Dockerfile.playerbots` and adding a toggle to the Modules action.)
 
 ---
 
@@ -225,9 +248,11 @@ actions:
   - set-realm-address
   - create-account
   - configure-playerbots
+  - configure-modules
 account_creation: direct DB insert with SRP6 (salt + verifier), no SOAP
 notes:
   - LAN/clearnet only (raw TCP, no Tor)
   - clean 3.3.5a client required, not bundled
   - bots on by default; toggling off behaves like the vanilla flavor
+  - optional modules compiled in, off by default, toggled via configure-modules (e.g. mod-auto-revive, GM-only)
 ```

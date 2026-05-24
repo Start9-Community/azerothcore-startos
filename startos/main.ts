@@ -74,6 +74,17 @@ export const main = sdk.setupMain(async ({ effects }) => {
     AC_AI_PLAYERBOT_RANDOM_BOT_AUTOLOGIN: botsOn ? '1' : '0',
     AC_AI_PLAYERBOT_MIN_RANDOM_BOTS: String(store.playerbots.minBots),
     AC_AI_PLAYERBOT_MAX_RANDOM_BOTS: String(store.playerbots.maxBots),
+    // Optional modules (compiled in, off by default), toggled via the Modules
+    // action. Env names are the module's config key with camelCase split by
+    // underscores (e.g. Transmogrification.Enable -> AC_TRANSMOGRIFICATION_ENABLE);
+    // IndividualXp.Enabled takes a boolean string.
+    AC_AUTO_REVIVE_ENABLE: store.modules.autoRevive ? '1' : '0',
+    AC_TRANSMOGRIFICATION_ENABLE: store.modules.transmog ? '1' : '0',
+    AC_LEARN_SPELLS_ENABLE: store.modules.learnSpells ? '1' : '0',
+    AC_INDIVIDUAL_XP_ENABLED: store.modules.individualXp ? 'true' : 'false',
+    AC_AOELOOT_ENABLE: store.modules.aoeLoot ? '1' : '0',
+    AC_BUFF_ENABLE: store.modules.npcBuffer ? '1' : '0',
+    AC_ENCHANTER_ENABLE: store.modules.npcEnchanter ? '1' : '0',
   }
 
   const exec = (binary: string) => ({

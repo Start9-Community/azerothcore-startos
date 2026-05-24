@@ -24,6 +24,24 @@ ARG ACORE_REPO=https://github.com/mod-playerbots/azerothcore-wotlk.git
 ARG ACORE_COMMIT=d6f96d206b0e835fe692ebf4206e8db8a52d4d38
 ARG PLAYERBOTS_REPO=https://github.com/mod-playerbots/mod-playerbots.git
 ARG PLAYERBOTS_COMMIT=6bbead70c5d8e4899b398a252c548e89d298513e
+# Optional gameplay modules: compiled in, but off by default and toggled at
+# runtime via the Modules action (AC_* env overrides). Pinned like the above.
+# To add one: add its repo+commit here and a clone line in the RUN below, then a
+# toggle in startos (utils MODULE_DEFAULTS, store.json, main.ts, configureModules).
+ARG AUTO_REVIVE_REPO=https://github.com/azerothcore/mod-auto-revive.git
+ARG AUTO_REVIVE_COMMIT=ce5ca7a600dbef0dec48dc6da42d374d08d6b728
+ARG TRANSMOG_REPO=https://github.com/azerothcore/mod-transmog.git
+ARG TRANSMOG_COMMIT=33ac64b2c305eb1b6fbc97310a7ecbc30c2ba4ef
+ARG LEARN_SPELLS_REPO=https://github.com/azerothcore/mod-learn-spells.git
+ARG LEARN_SPELLS_COMMIT=016b92d520f343d074ffd5d46016a94f4a3a6ebd
+ARG INDIVIDUAL_XP_REPO=https://github.com/azerothcore/mod-individual-xp.git
+ARG INDIVIDUAL_XP_COMMIT=503471f766bc4f21dca0aa05e6a9d3d40718a780
+ARG AOE_LOOT_REPO=https://github.com/azerothcore/mod-aoe-loot.git
+ARG AOE_LOOT_COMMIT=2ddf6ff75bdbfee3c81f2c149a07126f1d0bf200
+ARG NPC_BUFFER_REPO=https://github.com/azerothcore/mod-npc-buffer.git
+ARG NPC_BUFFER_COMMIT=532a6ba80c31b673338fcdb747cb2226bec4887e
+ARG NPC_ENCHANTER_REPO=https://github.com/azerothcore/mod-npc-enchanter.git
+ARG NPC_ENCHANTER_COMMIT=af32add66eafc0e0eb8775999e76ceed75f18b74
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential ccache libtool cmake-data make cmake clang \
@@ -34,16 +52,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Fetch the exact pinned commits (shallow). GitHub allows fetching a specific
-# SHA, so the build always compiles the same source.
-RUN git init /azerothcore \
-    && git -C /azerothcore remote add origin "${ACORE_REPO}" \
-    && git -C /azerothcore fetch --depth=1 origin "${ACORE_COMMIT}" \
-    && git -C /azerothcore checkout --detach FETCH_HEAD \
-    && git init /azerothcore/modules/mod-playerbots \
-    && git -C /azerothcore/modules/mod-playerbots remote add origin "${PLAYERBOTS_REPO}" \
-    && git -C /azerothcore/modules/mod-playerbots fetch --depth=1 origin "${PLAYERBOTS_COMMIT}" \
-    && git -C /azerothcore/modules/mod-playerbots checkout --detach FETCH_HEAD \
-    && git config --global --add safe.directory /azerothcore
+# SHA, so the build always compiles the same source. `clone <repo> <dir> <sha>`
+# fetches one repo at a pinned commit.
+RUN set -eu; \
+    clone() { git init "$2" \
+        && git -C "$2" remote add origin "$1" \
+        && git -C "$2" fetch --depth=1 origin "$3" \
+        && git -C "$2" checkout --detach FETCH_HEAD; }; \
+    clone "${ACORE_REPO}" /azerothcore "${ACORE_COMMIT}"; \
+    clone "${PLAYERBOTS_REPO}" /azerothcore/modules/mod-playerbots "${PLAYERBOTS_COMMIT}"; \
+    clone "${AUTO_REVIVE_REPO}" /azerothcore/modules/mod-auto-revive "${AUTO_REVIVE_COMMIT}"; \
+    clone "${TRANSMOG_REPO}" /azerothcore/modules/mod-transmog "${TRANSMOG_COMMIT}"; \
+    clone "${LEARN_SPELLS_REPO}" /azerothcore/modules/mod-learn-spells "${LEARN_SPELLS_COMMIT}"; \
+    clone "${INDIVIDUAL_XP_REPO}" /azerothcore/modules/mod-individual-xp "${INDIVIDUAL_XP_COMMIT}"; \
+    clone "${AOE_LOOT_REPO}" /azerothcore/modules/mod-aoe-loot "${AOE_LOOT_COMMIT}"; \
+    clone "${NPC_BUFFER_REPO}" /azerothcore/modules/mod-npc-buffer "${NPC_BUFFER_COMMIT}"; \
+    clone "${NPC_ENCHANTER_REPO}" /azerothcore/modules/mod-npc-enchanter "${NPC_ENCHANTER_COMMIT}"; \
+    git config --global --add safe.directory /azerothcore
 
 WORKDIR /azerothcore/build
 
