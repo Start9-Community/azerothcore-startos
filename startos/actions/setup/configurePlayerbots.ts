@@ -35,7 +35,6 @@ const inputSpec = InputSpec.of({
   }),
 })
 
-// Playerbots variant only (registered conditionally in actions/index.ts).
 // Bots are on by default; turning them off makes the server behave like vanilla.
 export const configurePlayerbots = sdk.Action.withInput(
   'configure-playerbots',

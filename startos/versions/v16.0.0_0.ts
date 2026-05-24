@@ -18,7 +18,9 @@ export const v16_0_0_0 = VersionInfo.of({
       ['^16']: {
         // vanilla -> playerbots
         up: async ({ effects }) => {},
-        // playerbots -> vanilla
+        // playerbots -> vanilla: no-op by design. The acore_playerbots database
+        // and any bot characters in acore_characters persist; the vanilla image
+        // simply ignores them. They can be removed manually if desired.
         down: async ({ effects }) => {},
       },
     },
