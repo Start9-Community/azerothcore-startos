@@ -1,6 +1,6 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
-export const v16_0_0_0 = VersionInfo.of({
+export const current = VersionInfo.of({
   version: '#playerbots:16.0.0:1',
   releaseNotes: {
     en_US:
