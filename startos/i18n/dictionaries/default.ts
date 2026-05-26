@@ -65,6 +65,26 @@ const dict = {
   'Bots enabled. The server is restarting.': 100,
   'Bots disabled, vanilla mode. The server is restarting.': 101,
   'Minimum was higher than maximum, so the values were swapped.': 102,
+
+  // configureModules.ts
+  Modules: 110,
+  'Enable or disable optional gameplay modules': 111,
+  'Auto-Revive (GM only)': 112,
+  'Instantly revive GM accounts on death instead of releasing spirit. Affects GM accounts only; normal players are unaffected.': 113,
+  'Modules Updated': 114,
+  'Module settings saved. The server is restarting.': 115,
+  Transmogrification: 116,
+  'Adds a transmog NPC to change the appearance of your gear while keeping its stats.': 117,
+  'Auto-Learn Spells': 118,
+  'Automatically learn class spells and ranks on level up, skipping class trainers.': 119,
+  'Individual XP Rate': 120,
+  'Let each player set their own XP rate (via in-game command) instead of a single server-wide rate.': 121,
+  'AoE Loot': 122,
+  'Loot all nearby corpses at once with a single action.': 123,
+  'Buff NPC': 124,
+  'Adds an NPC that applies common buffs on demand. Handy for solo/small groups missing buff classes.': 125,
+  'Enchanter NPC': 126,
+  'Adds an NPC that applies enchants to your gear, without needing an enchanter.': 127,
 } as const
 
 export type LangDict = Record<keyof typeof dict, string>

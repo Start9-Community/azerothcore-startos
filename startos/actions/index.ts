@@ -1,4 +1,5 @@
 import { sdk } from '../sdk'
+import { configureModules } from './setup/configureModules'
 import { configurePlayerbots } from './setup/configurePlayerbots'
 import { createAccount } from './setup/createAccount'
 import { getServerInfo } from './setup/getServerInfo'
@@ -9,3 +10,4 @@ export const actions = sdk.Actions.of()
   .addAction(setRealmAddress)
   .addAction(createAccount)
   .addAction(configurePlayerbots)
+  .addAction(configureModules)

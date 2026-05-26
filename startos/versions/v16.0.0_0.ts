@@ -1,10 +1,10 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const v16_0_0_0 = VersionInfo.of({
-  version: '#playerbots:16.0.0:0',
+  version: '#playerbots:16.0.0:1',
   releaseNotes: {
     en_US:
-      'AzerothCore Playerbots for StartOS: the mod-playerbots fork with AI players on by default and a Playerbots Settings action to disable or tune them. Shares the `azerothcore` package id with the vanilla flavor, so you can switch flavors in place keeping your world and characters.',
+      'Add a Modules action to toggle optional gameplay modules (off by default): Auto-Revive (GM-only), Transmogrification, Auto-Learn Spells, Individual XP Rate, AoE Loot, a Buff NPC, and an Enchanter NPC. Playerbots remain on by default and tunable via Playerbots Settings.',
   },
   migrations: {
     up: async ({ effects }) => {},
@@ -18,7 +18,9 @@ export const v16_0_0_0 = VersionInfo.of({
       ['^16']: {
         // vanilla -> playerbots
         up: async ({ effects }) => {},
-        // playerbots -> vanilla
+        // playerbots -> vanilla: no-op by design. The acore_playerbots database
+        // and any bot characters in acore_characters persist; the vanilla image
+        // simply ignores them. They can be removed manually if desired.
         down: async ({ effects }) => {},
       },
     },

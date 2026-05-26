@@ -1,6 +1,6 @@
 import { z, FileHelper } from '@start9labs/start-sdk'
 import { sdk } from '../sdk'
-import { PLAYERBOTS_DEFAULTS } from '../utils'
+import { MODULE_DEFAULTS, PLAYERBOTS_DEFAULTS } from '../utils'
 
 export const defaultRealmName = 'AzerothCore'
 
@@ -24,6 +24,19 @@ const storeConfigSchema = z.object({
       maxBots: z.number().int().catch(PLAYERBOTS_DEFAULTS.maxBots),
     })
     .catch({ ...PLAYERBOTS_DEFAULTS }),
+  // Optional gameplay modules (compiled in, off by default). Toggled via the
+  // Modules action; behavior applies to GM accounts only.
+  modules: z
+    .object({
+      autoRevive: z.boolean().catch(MODULE_DEFAULTS.autoRevive),
+      transmog: z.boolean().catch(MODULE_DEFAULTS.transmog),
+      learnSpells: z.boolean().catch(MODULE_DEFAULTS.learnSpells),
+      individualXp: z.boolean().catch(MODULE_DEFAULTS.individualXp),
+      aoeLoot: z.boolean().catch(MODULE_DEFAULTS.aoeLoot),
+      npcBuffer: z.boolean().catch(MODULE_DEFAULTS.npcBuffer),
+      npcEnchanter: z.boolean().catch(MODULE_DEFAULTS.npcEnchanter),
+    })
+    .catch({ ...MODULE_DEFAULTS }),
 })
 
 export type StoreConfig = z.infer<typeof storeConfigSchema>
