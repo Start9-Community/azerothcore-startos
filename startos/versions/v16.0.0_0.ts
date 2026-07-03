@@ -1,10 +1,13 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const v16_0_0_0 = VersionInfo.of({
-  version: '16.0.0:0',
+  version: '16.0.0:1',
   releaseNotes: {
-    en_US:
-      'AzerothCore for StartOS: auth + world servers, MySQL, automatic client-data download, and a realm-address picker. Account creation writes directly to the database via SRP6 (no SOAP). Shares the `azerothcore` package id with the Playerbots flavor, so you can switch flavors in place.',
+    en_US: 'Internal updates (start-sdk 2.0.x)',
+    es_ES: 'Actualizaciones internas (start-sdk 2.0.x)',
+    de_DE: 'Interne Aktualisierungen (start-sdk 2.0.x)',
+    pl_PL: 'Aktualizacje wewnętrzne (start-sdk 2.0.x)',
+    fr_FR: 'Mises à jour internes (start-sdk 2.0.x)',
   },
   migrations: {
     up: async ({ effects }) => {},

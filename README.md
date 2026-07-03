@@ -173,8 +173,9 @@ None.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for local build, install, and the
-two-flavor branch model.
+See [AGENTS.md](AGENTS.md) for the two-flavor branch model and repo-specific
+notes, and the [StartOS packaging guide](https://docs.start9.com/packaging) for
+local build and install.
 
 ---
 

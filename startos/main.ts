@@ -101,7 +101,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
 
   return sdk.Daemons.of(effects)
     .addDaemon('database', {
-      subcontainer: await sdk.SubContainer.of(
+      subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'database' },
         sdk.Mounts.of().mountVolume({
@@ -117,7 +117,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       requires: [],
     })
     .addOneshot('client-data', {
-      subcontainer: await sdk.SubContainer.of(
+      subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'client-data' },
         sdk.Mounts.of().mountVolume({
@@ -132,7 +132,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       requires: [],
     })
     .addOneshot('db-import', {
-      subcontainer: await sdk.SubContainer.of(
+      subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'db-import' },
         null,
@@ -142,7 +142,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       requires: ['database'],
     })
     .addOneshot('realm-config', {
-      subcontainer: await sdk.SubContainer.of(
+      subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'database' },
         null,
@@ -152,7 +152,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       requires: ['db-import'],
     })
     .addDaemon('authserver', {
-      subcontainer: await sdk.SubContainer.of(
+      subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'authserver' },
         null,
@@ -163,7 +163,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       requires: ['realm-config'],
     })
     .addDaemon('worldserver', {
-      subcontainer: await sdk.SubContainer.of(
+      subcontainer: sdk.SubContainer.of(
         effects,
         { imageId: 'worldserver' },
         sdk.Mounts.of().mountVolume({

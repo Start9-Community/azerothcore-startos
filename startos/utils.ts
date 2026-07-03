@@ -14,6 +14,13 @@ export const dbName = {
   characters: 'acore_characters',
 } as const
 
+// Host ids (the sdk.MultiHost.of groups) — distinct from the interface ids
+// exported on them.
+export const authHostId = 'auth-multi'
+export const worldHostId = 'world-multi'
+export const authInterfaceId = 'authserver'
+export const worldInterfaceId = 'worldserver'
+
 import { T } from '@start9labs/start-sdk'
 import { sdk } from './sdk'
 
@@ -41,17 +48,21 @@ export async function resolveRealmHost(
 ): Promise<string> {
   const chosen = override?.trim()
   if (chosen) return chosen
-  const iface = await sdk.serviceInterface.getOwn(effects, 'authserver').once()
-  const addr = iface?.addressInfo
-  if (!addr) return '127.0.0.1'
-  const ipv4s = addr.nonLocal
-    .filter({ kind: 'ipv4' })
-    .hostnames.map((h) => h.hostname)
-  // Prefer a typical home-LAN address (192.168.x) over VPN/tunnel ranges
-  // (10.x, 172.16-31.x) that the game client usually can't reach.
-  const homeLan = ipv4s.find((h) => h.startsWith('192.168.'))
-  if (homeLan) return homeLan
-  if (ipv4s[0]) return ipv4s[0]
-  const any = addr.nonLocal.hostnames[0]?.hostname
-  return any ?? '127.0.0.1'
+  const resolved = await sdk.host
+    .getOwn(effects, authHostId, (host) => {
+      const addr =
+        host?.bindings[authPort]?.interfaces[authInterfaceId]?.addressInfo
+      if (!addr) return null
+      const ipv4s = addr.nonLocal
+        .filter({ kind: 'ipv4' })
+        .hostnames.map((h) => h.hostname)
+      // Prefer a typical home-LAN address (192.168.x) over VPN/tunnel ranges
+      // (10.x, 172.16-31.x) that the game client usually can't reach.
+      const homeLan = ipv4s.find((h) => h.startsWith('192.168.'))
+      if (homeLan) return homeLan
+      if (ipv4s[0]) return ipv4s[0]
+      return addr.nonLocal.hostnames[0]?.hostname ?? null
+    })
+    .once()
+  return resolved ?? '127.0.0.1'
 }
