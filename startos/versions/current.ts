@@ -1,10 +1,13 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '#playerbots:16.0.0:1',
+  version: '#playerbots:16.0.0:2',
   releaseNotes: {
-    en_US:
-      'Add a Modules action to toggle optional gameplay modules (off by default): Auto-Revive (GM-only), Transmogrification, Auto-Learn Spells, Individual XP Rate, AoE Loot, a Buff NPC, and an Enchanter NPC. Playerbots remain on by default and tunable via Playerbots Settings.',
+    en_US: 'Internal updates (start-sdk 2.0.x)',
+    es_ES: 'Actualizaciones internas (start-sdk 2.0.x)',
+    de_DE: 'Interne Aktualisierungen (start-sdk 2.0.x)',
+    pl_PL: 'Aktualizacje wewnętrzne (start-sdk 2.0.x)',
+    fr_FR: 'Mises à jour internes (start-sdk 2.0.x)',
   },
   migrations: {
     up: async ({ effects }) => {},
@@ -25,4 +28,4 @@ export const current = VersionInfo.of({
       },
     },
   },
-}).satisfies('16.0.0:0')
+}).satisfies('16.0.0:1')

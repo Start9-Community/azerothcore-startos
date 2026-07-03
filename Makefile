@@ -4,4 +4,4 @@
 # x86_64 alone.
 ARCHES := x86
 
-include s9pk.mk
+include node_modules/@start9labs/start-sdk/s9pk.mk
