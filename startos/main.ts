@@ -140,7 +140,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
   return (
     sdk.Daemons.of(effects)
       .addDaemon('database', {
-        subcontainer: await sdk.SubContainer.of(
+        subcontainer: sdk.SubContainer.of(
           effects,
           { imageId: 'database' },
           sdk.Mounts.of().mountVolume({
@@ -156,7 +156,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         requires: [],
       })
       .addOneshot('client-data', {
-        subcontainer: await sdk.SubContainer.of(
+        subcontainer: sdk.SubContainer.of(
           effects,
           { imageId: 'client-data' },
           sdk.Mounts.of().mountVolume({
@@ -173,7 +173,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
       // Create all databases up front (the fork's auto-create only makes the
       // first one). db-import then populates auth/world/characters/playerbots.
       .addOneshot('create-dbs', {
-        subcontainer: await sdk.SubContainer.of(
+        subcontainer: sdk.SubContainer.of(
           effects,
           { imageId: 'database' },
           null,
@@ -192,7 +192,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         requires: ['database'],
       })
       .addOneshot('db-import', {
-        subcontainer: await sdk.SubContainer.of(
+        subcontainer: sdk.SubContainer.of(
           effects,
           { imageId: 'acore' },
           null,
@@ -202,7 +202,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         requires: ['database', 'create-dbs'],
       })
       .addOneshot('realm-config', {
-        subcontainer: await sdk.SubContainer.of(
+        subcontainer: sdk.SubContainer.of(
           effects,
           { imageId: 'database' },
           null,
@@ -212,7 +212,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         requires: ['db-import'],
       })
       .addDaemon('authserver', {
-        subcontainer: await sdk.SubContainer.of(
+        subcontainer: sdk.SubContainer.of(
           effects,
           { imageId: 'acore' },
           null,
@@ -223,7 +223,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
         requires: ['realm-config'],
       })
       .addDaemon('worldserver', {
-        subcontainer: await sdk.SubContainer.of(
+        subcontainer: sdk.SubContainer.of(
           effects,
           { imageId: 'acore' },
           sdk.Mounts.of().mountVolume({
