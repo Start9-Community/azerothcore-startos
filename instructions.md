@@ -4,6 +4,12 @@ A World of Warcraft **3.3.5a (Wrath of the Lich King)** server emulator. This
 package runs the auth server, world server, and database, and auto-downloads the
 client map data. You connect with your own clean 3.3.5a game client.
 
+## Documentation
+
+- [AzerothCore Wiki](https://www.azerothcore.org/wiki/home) — the upstream
+  documentation: server administration, GM commands, and configuration
+  reference.
+
 ## First start
 
 The **first boot downloads ~1.1GB** of client map data and initializes three
