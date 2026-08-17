@@ -4,27 +4,17 @@
 
 # AzerothCore Playerbots on StartOS
 
-> **Upstream project:** <https://www.azerothcore.org/> /
-> [mod-playerbots](https://github.com/mod-playerbots/azerothcore-wotlk)
->
 > Everything not listed in this document should behave the same as upstream
 > AzerothCore. If a feature, setting, or behavior is not mentioned here, the
-> upstream documentation is accurate and applicable.
+> upstream documentation is accurate and fully applicable — see the
+> Documentation section of `instructions.md` for links.
 
-StartOS package for [AzerothCore](https://www.azerothcore.org/) with
-[mod-playerbots](https://github.com/mod-playerbots/azerothcore-wotlk) built in —
-an open-source World of Warcraft **3.3.5a (Wrath of the Lich King)** server
-emulator that populates the world with AI players (bots), so the realm feels
-alive even when you play solo. Runs the auth server, world server, and a MySQL
-database, auto-downloads client map data, and auto-configures the realm address
-for LAN play. You bring your own clean 3.3.5a game client.
+[AzerothCore](https://github.com/azerothcore/azerothcore-wotlk) is an open-source World of Warcraft 3.3.5a (Wrath of the Lich King) server emulator. This package runs the [mod-playerbots](https://github.com/mod-playerbots/azerothcore-wotlk) fork, which fills the realm with AI players, alongside the auth server, world server, and their MySQL database.
 
-This package shares the `azerothcore` package id with the **vanilla flavor** (the
-[`main` branch](https://github.com/Start9-Community/azerothcore-startos), stock
-AzerothCore with no bots). They are mutually exclusive — pick one flavor in the
-marketplace; StartOS lets you switch between them in place, preserving your world
-and characters. Turning bots off here makes the server behave like the vanilla
-flavor.
+This is the **Playerbots flavor**. It shares the `azerothcore` package id with the vanilla flavor on the `main` branch, so a user can switch between them in place and keep their world and characters. Turning the bots off here leaves the realm behaving as vanilla does — see [Actions](#actions).
+
+- **Upstream repo:** <https://github.com/mod-playerbots/azerothcore-wotlk>
+- **Wrapper repo:** <https://github.com/Start9-Community/azerothcore-startos/tree/playerbots>
 
 ---
 
@@ -32,228 +22,245 @@ flavor.
 
 - [Image and Container Runtime](#image-and-container-runtime)
 - [Volume and Data Layout](#volume-and-data-layout)
-- [Installation and First-Run Flow](#installation-and-first-run-flow)
-- [Network Access and Interfaces](#network-access-and-interfaces)
-- [Actions (StartOS UI)](#actions-startos-ui)
-- [Modules](#modules)
-- [Playerbots](#playerbots)
-- [Connecting a Client](#connecting-a-client)
-- [Backups and Restore](#backups-and-restore)
-- [Health Checks](#health-checks)
+- [File Models](#file-models)
 - [Dependencies](#dependencies)
+- [Network Access and Interfaces](#network-access-and-interfaces)
+- [Installation and First-Run Flow](#installation-and-first-run-flow)
+- [Actions](#actions)
+- [Tasks](#tasks)
+- [Health Checks](#health-checks)
+- [Backups and Restore](#backups-and-restore)
 - [Limitations and Differences](#limitations-and-differences)
-- [What Is Unchanged from Upstream](#what-is-unchanged-from-upstream)
-- [Contributing](#contributing)
-- [License](#license)
 - [Quick Reference for AI Consumers](#quick-reference-for-ai-consumers)
 
 ---
 
 ## Image and Container Runtime
 
-| Image | Role | Source |
-| --- | --- | --- |
-| `database` | MySQL backend (acore_auth, acore_world, acore_characters, acore_playerbots) | `mysql:8.4` |
-| `acore` | Consolidated auth + world + db-import | mod-playerbots fork (see below) |
-| `client-data` | One-shot map/vmap/mmap/dbc downloader (~1.1GB) | Official `acore/ac-wotlk-client-data` |
+Three images. Two are upstream's, pinned by digest; the third is built from source at pack time, and that is the defining difference from the vanilla flavor.
 
-The `acore` image is the mod-playerbots fork (a custom AzerothCore fork — bots
-are not a runtime-loadable module), compiled from source at pack time via
-`Dockerfile.playerbots` (pinned to exact fork/module commits). The first build is
-slow; Docker layer-caches the compile, so later repacks are quick. `database` and
-`client-data` are the official upstream images, pinned by digest.
+| Property      | Value                                                       |
+| ------------- | ----------------------------------------------------------- |
+| Images        | `acore` (built here), `mysql`, `acore/ac-wotlk-client-data` |
+| Architectures | x86_64 only                                                 |
+| Entrypoint    | The fork image's entrypoint, given a binary name per role   |
 
-| Property | Value |
-| --- | --- |
-| Architectures | x86_64 |
-| Entry command | Fork image entrypoint per role (`authserver`/`worldserver`/`dbimport`) |
+| Subcontainer       | Image         | Kind    | Purpose                                                     |
+| ------------------ | ------------- | ------- | ----------------------------------------------------------- |
+| `database-sub`     | `database`    | daemon  | MySQL, holding all four databases                           |
+| `authserver-sub`   | `acore`       | daemon  | Login and realm list                                        |
+| `worldserver-sub`  | `acore`       | daemon  | The game world and the bots — attach here for gameplay logs |
+| `client-data-sub`  | `client-data` | oneshot | Downloads maps, vmaps, mmaps and DBC on first boot          |
+| `create-dbs-sub`   | `database`    | oneshot | Creates all four databases up front                         |
+| `db-import-sub`    | `acore`       | oneshot | Populates and upgrades the four databases                   |
+| `realm-config-sub` | `database`    | oneshot | Writes this realm's address into `acore_auth.realmlist`     |
 
----
+**Playerbots is a fork, not a loadable module**, so the auth server, world server and database importer all come from one image compiled from the fork's source rather than from upstream's three prebuilt ones. The role is selected per container by the binary passed to the shared entrypoint. That compile is why a first build of this package is slow where the vanilla flavor's is not.
 
 ## Volume and Data Layout
 
-The package uses a single volume, `main`, with these subpaths:
+One volume, carved into three subpaths that are mounted into different containers.
 
-| Subpath in `main` volume | Container mount point | Purpose |
-| --- | --- | --- |
-| `mysql/` | `/var/lib/mysql` (database) | All four databases |
-| `data/` | `/azerothcore/env/dist/data` (worldserver, client-data) | Maps, vmaps, mmaps, dbc |
-| `start9/store.json` | (package-internal) | DB password, realm name, realm address, playerbots settings |
+| Subpath             | Mounted at                   | In                                             | Purpose                                         |
+| ------------------- | ---------------------------- | ---------------------------------------------- | ----------------------------------------------- |
+| `mysql/`            | `/var/lib/mysql`             | `database-sub`                                 | All four databases                              |
+| `data/`             | `/azerothcore/env/dist/data` | `client-data-sub` (rw), `worldserver-sub` (ro) | Maps, vmaps, mmaps, DBC                         |
+| `start9/store.json` | —                            | package-internal                               | Database password, realm settings, bot settings |
 
----
+The world server mounts `data/` **read-only**, so only the download oneshot can write it — a corrupted map set comes from a failed download, never from the running server.
 
-## Installation and First-Run Flow
+Bot characters live in the same databases as real ones, so they are part of the volume's growth and part of every backup.
 
-On first install/start, the package runs an ordered boot sequence:
+## File Models
 
-1. **MySQL** comes up (root password generated once at install, stored in `start9/store.json`).
-2. **client-data** one-shot downloads ~1.1GB of map data (only on first boot; idempotent thereafter).
-3. **create-dbs** one-shot creates all four databases (the fork only auto-creates the first).
-4. **db-import** one-shot creates/updates the databases (including the playerbots schema).
-5. **realm-config** one-shot writes this server's address into `acore_auth.realmlist` so clients can connect.
-6. **authserver** and **worldserver** daemons start; bots log in and spread out automatically.
+One model, `store.json`, holding everything the package decides on the user's behalf — including both configuration actions' settings.
 
-First boot takes several minutes (the client-data download + DB init). The World
-Server health check shows "loading" until it finishes. Subsequent starts are fast.
+| File                | Format | Modelled                | Written by                               |
+| ------------------- | ------ | ----------------------- | ---------------------------------------- |
+| `start9/store.json` | JSON   | Yes — `FileHelper.json` | Init and the three configuration actions |
 
----
+- **`dbPassword`** — generated once at install and never shown. It is MySQL's root password. Nothing regenerates it, because rotating it would leave the existing data directory unopenable.
+- **`realmName`** — the realm's display name in the client's realm list.
+- **`realmAddress`** — the address written into the realm list. Empty means "resolve one automatically", which is the default.
+- **`playerbots`** — `enabled`, `minBots`, `maxBots`. Written by [Playerbots Settings](#actions).
+- **`modules`** — one boolean per optional gameplay module. Written by [Modules](#actions).
 
-## Network Access and Interfaces
+Init merges the model on **every** init, not only install, so a field added in a later version picks up its default on upgrade rather than reading as unset. That is what allows new module toggles to appear without a migration.
 
-| Interface ID | Port | Protocol | Purpose |
-| --- | --- | --- | --- |
-| `authserver` | 3724 | TCP | WoW login (the address you put in realmlist.wtf) |
-| `worldserver` | 8085 | TCP | Game world connection |
-
-Internal-only service ports:
-- `3306` MySQL (used by the daemons and the Create Account action)
-
-**LAN / clearnet only.** WoW 3.3.5 uses a raw TCP game protocol and cannot run
-over Tor. Both interfaces are declared `p2p`.
-
----
-
-## Actions (StartOS UI)
-
-| Action ID | Purpose | Availability |
-| --- | --- | --- |
-| `get-server-info` | Show the realm address + client connection details ("Connection Info") | any |
-| `set-realm-address` | Choose which address clients use to reach the world server (needed when the box has multiple networks, e.g. LAN + tunnel) | any |
-| `create-account` | Create a WoW login account (SRP6, written directly to the database) | only-running |
-| `configure-playerbots` | Enable/disable AI players and tune the bot population | any |
-| `configure-modules` | Enable/disable optional gameplay modules (e.g. Auto-Revive) | any |
-
----
-
-## Modules
-
-Optional AzerothCore gameplay modules are **compiled into the image** (AC modules
-are static, not runtime-loadable) but ship **off by default**, and the **Modules**
-action toggles them at runtime (saving restarts the server). This keeps the build
-self-contained while letting you enable extras without recompiling.
-
-| Module | Effect | Default |
-| --- | --- | --- |
-| **Auto-Revive** ([mod-auto-revive](https://github.com/azerothcore/mod-auto-revive)) | Instantly revives **GM accounts** on death instead of releasing spirit. Normal players are unaffected. | off |
-| **Transmogrification** ([mod-transmog](https://github.com/azerothcore/mod-transmog)) | Transmog NPC to change gear appearance while keeping stats. | off |
-| **Auto-Learn Spells** ([mod-learn-spells](https://github.com/azerothcore/mod-learn-spells)) | Auto-learn class spells/ranks on level up; skip trainers. | off |
-| **Individual XP Rate** ([mod-individual-xp](https://github.com/azerothcore/mod-individual-xp)) | Each player sets their own XP rate via in-game command. | off |
-| **AoE Loot** ([mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot)) | Loot all nearby corpses at once. | off |
-| **Buff NPC** ([mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer)) | NPC that applies common buffs on demand. | off |
-| **Enchanter NPC** ([mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter)) | NPC that applies enchants to your gear. | off |
-
-(More modules can be added by pinning them in `Dockerfile.playerbots` and adding a toggle to the Modules action.)
-
----
-
-## Playerbots
-
-Bots are **enabled by default**. The **Playerbots Settings** action toggles them
-and tunes the minimum/maximum random-bot population; saving restarts the server.
-Turning bots off leaves their characters dormant in the database (they stop
-logging in) and makes the realm behave like the vanilla flavor; re-enabling
-brings the population back. Each bot uses roughly **10-20 MB of RAM** (default
-20-40 bots is under a gigabyte).
-
----
-
-## Connecting a Client
-
-1. Obtain a clean **WoW 3.3.5a (build 12340)** client (not included — copyrighted).
-2. Run **Set Realm Address** and pick your LAN address (e.g. `192.168.x.x`).
-3. Run **Connection Info** to confirm the address.
-4. Run **Create Account** to make a login.
-5. Edit `Data/enUS/realmlist.wtf`: `set realmlist <that address>`.
-6. Delete the client's `Cache/` folder, launch, log in.
-
----
-
-## Backups and Restore
-
-**Included in backup:** the `main` volume (all databases including bot characters + downloaded client data).
-**Restore:** standard StartOS restore flow (`restoreInit`); the realm is recreated as it was.
-
----
-
-## Health Checks
-
-| Check | Method | Notes |
-| --- | --- | --- |
-| `database` | Port `3306` listening | 30s grace |
-| `authserver` | Port `3724` listening | after realm config |
-| `worldserver` | Port `8085` listening | 120s grace (first-boot map load) |
-
----
+AzerothCore's own `.conf` files are not modelled. Every setting is passed as an `AC_*` environment variable derived from the store at start-up, which is also why every configuration action restarts the service: the values are read once, when the daemons are built.
 
 ## Dependencies
 
-None.
+None. MySQL runs as a private sidecar of this service rather than as a StartOS dependency.
 
----
+## Network Access and Interfaces
+
+Two interfaces, both raw TCP. A WoW client contacts the auth server first, and is handed off to the world server whose address it finds in the realm list.
+
+| Interface    | Id            | Type | Port | Description                               |
+| ------------ | ------------- | ---- | ---- | ----------------------------------------- |
+| Auth Server  | `authserver`  | p2p  | 3724 | Login server — the `realmlist.wtf` target |
+| World Server | `worldserver` | p2p  | 8085 | The game world, connected to after login  |
+
+Bound on the `auth-multi` and `world-multi` MultiHosts respectively, each requesting its own port number as the external one so a client's hard-coded expectations hold. Neither is masked and neither carries TLS — the game protocol is not HTTP and does not negotiate it.
+
+MySQL listens on 3306 inside the service and is never exported.
+
+**The realm list is the reason the address matters more here than for a typical package.** The auth server answers with whatever address `acore_auth.realmlist` holds, and the client then connects to _that_ — so an address that the box can see but the client cannot produces a login that succeeds and a world connection that hangs. That is what [Set Realm Address](#actions) exists to correct.
+
+## Installation and First-Run Flow
+
+Install generates the database password and seeds the store; everything else happens on the first start, in a fixed order.
+
+The boot chain is `database` → `client-data` → `create-dbs` → `db-import` → `realm-config` → `authserver` and `worldserver`, wired with `requires` rather than with sleeps. Three of those steps matter to a first boot:
+
+1. **`client-data`** downloads and extracts the map data. It is idempotent — it checks for the DBC directory and skips the download if it is already there — so this cost is paid on first boot and never again.
+2. **`create-dbs`** creates all four databases explicitly. The fork's own auto-create only makes the first one, so without this step `db-import` finds nothing to populate.
+3. **`db-import`** applies upstream's schema and world data, plus the fork's bot schema. It runs with database migrations enabled across all four; the long-running daemons run with them **disabled**, so only this one step can ever alter the schema.
+
+Then `realm-config` resolves the realm address and writes it into `acore_auth.realmlist`, and the two game daemons come up. Once the world server is ready, bots log in on their own.
+
+First boot therefore takes minutes with the World Server check reporting "loading" throughout; subsequent starts take seconds.
+
+Address resolution prefers a `192.168.x.x` address over any other non-local IPv4, because a box with both a home LAN and a tunnel or VPN interface will otherwise advertise an address the game client cannot route to. It falls back to the first non-local address, then to `127.0.0.1`.
+
+## Actions
+
+Five actions, all in the **Setup** group. The last two are this flavor's, and both restart the service.
+
+### Connection Info
+
+Shows what to put in the client's `realmlist.wtf`, the auth port, and the client build this realm speaks. Run it before configuring a client, and again after changing the realm address.
+
+- **What it changes:** nothing. It resolves the current address and reports it.
+- **Cost:** immediate; available at any status.
+- **Repeat safety:** read-only.
+- **Outputs:** the full `set realmlist <address>` line, the auth port, and the client version (`3.3.5a`, build 12340).
+
+### Set Realm Address
+
+Overrides the address clients are handed for the world server. Run it when the automatic choice is wrong — the usual cause is a box with more than one network, where the resolver picks a tunnel address a game client cannot reach.
+
+- **What it changes:** `realmAddress` in the store, and through it `acore_auth.realmlist` on the next start.
+- **Cost:** **it restarts the service.** The realm list is rewritten by the `realm-config` oneshot, which only runs as part of the boot chain.
+- **Repeat safety:** idempotent; the last value wins. The input is validated against a strict character set, so an address containing anything other than letters, digits, dots, colons and hyphens is rejected rather than written.
+- **What happens next:** players must set the same address in `realmlist.wtf` — the two have to agree.
+
+### Create Account
+
+Creates a WoW login account, optionally with Game Master privileges. Run it once per player.
+
+- **When to run it:** only while the service is running — it opens a database connection rather than shelling into a container.
+- **What it changes:** inserts a row into `acore_auth.account`, and into `account_access` when a GM level above 0 is chosen. The GM grant is realm-wide.
+- **Repeat safety:** **not** idempotent — a second run with an existing account name fails rather than overwriting it. There is no action to change or reset a password.
+- **Cost:** immediate; no restart.
+
+Account names are upper-cased before insert, matching AzerothCore's own convention, and the password is stored as an SRP6 salt and verifier computed in-package. No SOAP interface is enabled and none is needed, which is what allows the _first_ account to be created without an existing Game Master.
+
+### Playerbots Settings
+
+Turns the bots on or off and sets the random-bot population. Run it to make the realm quieter or busier, or to run this flavor as a vanilla realm.
+
+- **What it changes:** the `playerbots` block in the store, which becomes the fork's bot environment variables at start-up.
+- **Cost:** **it restarts the service**, and the bot population then rebuilds toward the new minimum over time rather than immediately.
+- **Repeat safety:** idempotent. A minimum above the maximum is silently swapped rather than rejected, and the action's result says so.
+- **What happens next:** disabling leaves the existing bot characters in the database, dormant — nothing is deleted, and re-enabling brings the same population back.
+- **Sizing:** each bot costs roughly 10–20 MB of RAM, so the population bound is effectively a memory budget. This is the setting to lower first on a box under memory pressure.
+
+### Modules
+
+Toggles the optional gameplay modules compiled into the image. Run it to enable an extra the fork ships but does not turn on.
+
+- **What it changes:** the `modules` block in the store, which becomes one `AC_*` flag per module at start-up.
+- **Cost:** **it restarts the service.**
+- **Repeat safety:** idempotent.
+- **Scope limit:** the module set is fixed by the image, not by configuration. Adding a module means rebuilding, not toggling — which is also why a module that is off still costs image size.
+- **A note on Auto-Revive:** it applies to Game Master accounts only, so enabling it changes nothing for ordinary players.
+
+## Tasks
+
+None. This package raises no tasks, so the service is never held on a prompt and its ordinary controls are always available.
+
+## Health Checks
+
+Three checks, one per daemon, and their grace periods encode how long each is allowed to take.
+
+| Check         | Displayed as   | Method                 | Grace Period |
+| ------------- | -------------- | ---------------------- | ------------ |
+| `database`    | "Database"     | Port 3306 is listening | 30s          |
+| `authserver`  | "Auth Server"  | Port 3724 is listening | default      |
+| `worldserver` | "World Server" | Port 8085 is listening | 120s         |
+
+The world server's 120 seconds covers loading the map data into memory at start-up, which is why it reports "loading" rather than failing during a normal boot. On a **first** boot it will exceed even that, because the client-data download runs ahead of it — a "loading" world server on a brand-new install is the download, not a fault.
+
+None of the checks say anything about the bots. A green world server with an empty world means the bots are disabled or their maximum is zero — a configuration question, not a health one, answered by [Playerbots Settings](#actions).
+
+## Backups and Restore
+
+The `main` volume is copied wholesale — `sdk.Backups.ofVolumes('main')`. Nothing is dumped and nothing is excluded.
+
+A plain file copy is safe for MySQL here because StartOS stops the service before taking a backup, and MySQL flushes to disk on graceful shutdown. That guarantee is what makes it acceptable to skip a logical dump for a single-instance database.
+
+Consequences worth knowing: the backup includes the downloaded client data and every bot character, so it is large — over a gigabyte before a real player exists. A restored instance needs nothing done to it, but the realm address travels with the backup, so restoring onto a box with a different LAN address needs [Set Realm Address](#actions) re-run.
 
 ## Limitations and Differences
 
-1. **LAN / clearnet only** — no Tor (raw TCP game protocol).
-2. **Bring your own client** — the game client is copyrighted and not bundled.
-3. Use a **clean 3.3.5a client** — modified clients (custom DBC) or some addons
-   can show "Filler text" / broken quests from client-server data mismatch.
-4. **x86_64 only** — the playerbots core is built for 64-bit Intel/AMD; there is
-   no ARM build.
-5. The interactive worldserver console is disabled (`AC_CONSOLE_ENABLE=0`) so logs stay clean.
-
----
-
-## What Is Unchanged from Upstream
-
-- The AzerothCore server runtime, databases, and game data.
-- Standard WoW 3.3.5a client connection flow (auth on 3724, world on 8085).
-
----
-
-## Contributing
-
-See [AGENTS.md](AGENTS.md) for the two-flavor branch model and repo-specific
-notes, and the [StartOS packaging guide](https://docs.start9.com/packaging) for
-local build and install.
-
----
-
-## License
-
-The StartOS packaging code in this repository is **MIT** (see [LICENSE](LICENSE)).
-The software it installs and runs, **AzerothCore** and **mod-playerbots**, is
-licensed separately under **GPL-2.0** — see
-<https://github.com/azerothcore/azerothcore-wotlk>.
+1. **LAN and clearnet only — no Tor.** The game protocol is raw TCP rather than HTTP, so both interfaces are declared `p2p` and Tor cannot carry them.
+2. **x86_64 only.** The fork is compiled for 64-bit Intel and AMD; there is no ARM build.
+3. **The game client is not included.** A clean 3.3.5a (build 12340) client is required and is copyrighted; a modified client with custom DBC files, or some addons, produce "Filler text" NPCs and broken quests from the data mismatch.
+4. **The module set is fixed at build time.** AzerothCore modules are compiled in rather than loaded, so the Modules action can only toggle what the image already contains.
+5. **The interactive world server console is disabled** (`AC_CONSOLE_ENABLE=0`), so console commands are not available and the logs carry only server output.
+6. **There is no password-reset action.** Accounts are created but not otherwise managed by the package.
+7. **Bots are memory-bound, not CPU-bound, in practice.** The population setting is the main lever on this package's footprint.
 
 ---
 
 ## Quick Reference for AI Consumers
 
 ```yaml
-package_id: azerothcore
-flavor: '#playerbots:'      # sibling flavor: vanilla (main branch, unflavored)
-architectures: [x86_64]
+package_id: azerothcore # the #playerbots flavor; the main branch is the unflavored one
+image: acore # built from Dockerfile.playerbots; plus mysql, acore/ac-wotlk-client-data
+architectures:
+  - x86_64
+subcontainers:
+  - database-sub # daemon
+  - authserver-sub # daemon
+  - worldserver-sub # daemon
+  - client-data-sub # oneshot
+  - create-dbs-sub # oneshot
+  - db-import-sub # oneshot
+  - realm-config-sub # oneshot
 volumes:
   main:
-    mysql: /var/lib/mysql                    # database container
-    data: /azerothcore/env/dist/data         # worldserver + client-data
-    store: start9/store.json                 # dbPassword, realmName, realmAddress, playerbots
-ports:
-  authserver: 3724    # realmlist target
-  worldserver: 8085   # game world
-  database: 3306      # internal only
-dependencies: none
-boot_order: [database, client-data, create-dbs, db-import, realm-config, authserver, worldserver]
+    mysql: /var/lib/mysql
+    data: /azerothcore/env/dist/data
+    start9/store.json: package-internal
+file_models:
+  - start9/store.json
+startos_managed_env_vars:
+  - MYSQL_ROOT_PASSWORD
+  - AC_LOGIN_DATABASE_INFO
+  - AC_WORLD_DATABASE_INFO
+  - AC_CHARACTER_DATABASE_INFO
+  - AC_PLAYERBOTS_DATABASE_INFO
+  - AC_DATA_DIR
+  - AC_CONSOLE_ENABLE
+  - AC_UPDATES_ENABLE_DATABASES
+  - AC_AI_PLAYERBOT_* # enabled, autologin, min/max random bots
+  - AC_* # one flag per optional module
+dependencies: []
+interfaces:
+  authserver: { type: p2p, port: 3724 }
+  worldserver: { type: p2p, port: 8085 }
 actions:
   - get-server-info
   - set-realm-address
   - create-account
   - configure-playerbots
   - configure-modules
-account_creation: direct DB insert with SRP6 (salt + verifier), no SOAP
-notes:
-  - LAN/clearnet only (raw TCP, no Tor)
-  - clean 3.3.5a client required, not bundled
-  - bots on by default; toggling off behaves like the vanilla flavor
-  - optional modules compiled in, off by default, toggled via configure-modules (e.g. mod-auto-revive, GM-only)
+tasks: []
+health_checks:
+  - database # displayed "Database"
+  - authserver # displayed "Auth Server"
+  - worldserver # displayed "World Server"
 ```

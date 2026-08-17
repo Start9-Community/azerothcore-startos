@@ -6,6 +6,14 @@ database, auto-downloads the client map data, and populates the world with AI
 players (bots) so the realm feels alive even when you play solo. You connect with
 your own clean 3.3.5a game client.
 
+## Documentation
+
+- [AzerothCore Wiki](https://www.azerothcore.org/wiki/home) — the upstream
+  documentation: server administration, GM commands, and configuration
+  reference.
+- [mod-playerbots](https://github.com/mod-playerbots/azerothcore-wotlk) — the
+  fork this flavor runs, and the reference for bot chat commands.
+
 ## First start
 
 The **first boot downloads ~1.1GB** of client map data and initializes the
