@@ -21,9 +21,9 @@ ARG TZ=Etc/UTC
 # exact commits for reproducible builds (these were the branch HEADs at pin time:
 # fork Playerbot + module default branch). Update the SHAs to bump.
 ARG ACORE_REPO=https://github.com/mod-playerbots/azerothcore-wotlk.git
-ARG ACORE_COMMIT=d6f96d206b0e835fe692ebf4206e8db8a52d4d38
+ARG ACORE_COMMIT=9fb906bb7296212ff42fc95ff73a92aaf8554f0d
 ARG PLAYERBOTS_REPO=https://github.com/mod-playerbots/mod-playerbots.git
-ARG PLAYERBOTS_COMMIT=6bbead70c5d8e4899b398a252c548e89d298513e
+ARG PLAYERBOTS_COMMIT=2f7d9f774987d0157c6a0d0cc08c40bec3db3945
 # Optional gameplay modules: compiled in, but off by default and toggled at
 # runtime via the Modules action (AC_* env overrides). Pinned like the above.
 # To add one: add its repo+commit here and a clone line in the RUN below, then a
@@ -31,13 +31,13 @@ ARG PLAYERBOTS_COMMIT=6bbead70c5d8e4899b398a252c548e89d298513e
 ARG AUTO_REVIVE_REPO=https://github.com/azerothcore/mod-auto-revive.git
 ARG AUTO_REVIVE_COMMIT=ce5ca7a600dbef0dec48dc6da42d374d08d6b728
 ARG TRANSMOG_REPO=https://github.com/azerothcore/mod-transmog.git
-ARG TRANSMOG_COMMIT=33ac64b2c305eb1b6fbc97310a7ecbc30c2ba4ef
+ARG TRANSMOG_COMMIT=0d85cbc53d63ce2df8527169ce6ae47f5f6f6ba8
 ARG LEARN_SPELLS_REPO=https://github.com/azerothcore/mod-learn-spells.git
 ARG LEARN_SPELLS_COMMIT=016b92d520f343d074ffd5d46016a94f4a3a6ebd
 ARG INDIVIDUAL_XP_REPO=https://github.com/azerothcore/mod-individual-xp.git
 ARG INDIVIDUAL_XP_COMMIT=503471f766bc4f21dca0aa05e6a9d3d40718a780
 ARG AOE_LOOT_REPO=https://github.com/azerothcore/mod-aoe-loot.git
-ARG AOE_LOOT_COMMIT=2ddf6ff75bdbfee3c81f2c149a07126f1d0bf200
+ARG AOE_LOOT_COMMIT=b5c663572d936985c19dc8b499ecea60e1da570d
 ARG NPC_BUFFER_REPO=https://github.com/azerothcore/mod-npc-buffer.git
 ARG NPC_BUFFER_COMMIT=532a6ba80c31b673338fcdb747cb2226bec4887e
 ARG NPC_ENCHANTER_REPO=https://github.com/azerothcore/mod-npc-enchanter.git

@@ -5,9 +5,9 @@ import { longDescription, shortDescription } from './i18n'
 // consolidated image ('acore') built from the mod-playerbots fork; `database`
 // and `client-data` reuse the official upstream images (pinned by digest).
 const MYSQL =
-  'mysql:8.4@sha256:c36050afdca850f23cef85703f84c7531a5ae155a11b5ee1c60acb09937c4084'
+  'mysql:8.4@sha256:b3b90af2a6552ae30c266fdb7d5dd55f3afb72404bb78d37fe8a23eb857fd3fb'
 const AC_CLIENT_DATA =
-  'acore/ac-wotlk-client-data:16.0.0-dev@sha256:9d60578f2971638ab680cb15dc4f48f52da3ac058c60d3d60a1f0fe24c96e68d'
+  'acore/ac-wotlk-client-data:17.0.0-dev@sha256:86a10168cf6a1e54a8895bef5938a940872332d92232e9af9848e862de1d7a2a'
 
 const ARCH_X86: ['x86_64'] = ['x86_64']
 

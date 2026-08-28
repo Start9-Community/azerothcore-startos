@@ -14,11 +14,17 @@ import {
 const dbGracePeriod = 30_000
 const worldGracePeriod = 120_000 // first boot loads maps + DB, can be slow
 
-// Client-data download, idempotent: skips if maps already present.
+// Client-data download. `inst_download_client_data` is itself idempotent and
+// version-aware: it compares its pinned data version against INSTALLED_VERSION
+// in `data/data-version` (which lives in the `main` volume) and returns early
+// when they match. Don't guard this on the data directory merely existing --
+// upstream bumps the data version when the map format changes (v19 -> v20 for
+// MMAP_VERSION 20), and a presence check would leave an upgraded install
+// running the new worldserver against stale mmaps it rejects.
 const CLIENT_DATA_CMD: [string, ...string[]] = [
   'bash',
   '-c',
-  '[ -d /azerothcore/env/dist/data/dbc ] && echo "client data present, skipping" || (source /azerothcore/apps/installer/includes/functions.sh && inst_download_client_data)',
+  'source /azerothcore/apps/installer/includes/functions.sh && inst_download_client_data',
 ]
 
 // Run an AC binary through the consolidated fork image entrypoint.
@@ -167,7 +173,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
           }),
           'client-data-sub',
         ),
-        exec: { command: CLIENT_DATA_CMD },
+        // Run as root: the `main` volume mountpoint is root-owned, and the
+        // client-data image began declaring `USER acore` (uid 1000) in
+        // 17.0.0-dev, which cannot write the zip or extract into it. The
+        // 16.0.0-dev image ran as root implicitly, so this preserves the
+        // behavior the download has always relied on.
+        exec: { command: CLIENT_DATA_CMD, user: 'root' },
         requires: [],
       })
       // Create all databases up front (the fork's auto-create only makes the

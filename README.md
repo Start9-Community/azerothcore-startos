@@ -114,7 +114,7 @@ Install generates the database password and seeds the store; everything else hap
 
 The boot chain is `database` → `client-data` → `create-dbs` → `db-import` → `realm-config` → `authserver` and `worldserver`, wired with `requires` rather than with sleeps. Three of those steps matter to a first boot:
 
-1. **`client-data`** downloads and extracts the map data. It is idempotent — it checks for the DBC directory and skips the download if it is already there — so this cost is paid on first boot and never again.
+1. **`client-data`** downloads and extracts the map data. It is idempotent and version-aware — upstream's downloader compares its pinned data version against `INSTALLED_VERSION` in `data/data-version` and returns early when they match — so the cost is paid on first boot, and again only when upstream bumps the data version because the map format changed.
 2. **`create-dbs`** creates all four databases explicitly. The fork's own auto-create only makes the first one, so without this step `db-import` finds nothing to populate.
 3. **`db-import`** applies upstream's schema and world data, plus the fork's bot schema. It runs with database migrations enabled across all four; the long-running daemons run with them **disabled**, so only this one step can ever alter the schema.
 
