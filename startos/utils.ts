@@ -1,3 +1,8 @@
+import { T } from '@start9labs/start-sdk'
+import { createConnection, Connection } from 'mysql2/promise'
+import { storeJson } from './fileModels/store.json'
+import { sdk } from './sdk'
+
 // Auth server, WoW client connects here first for login + realm list.
 export const authPort = 3724
 
@@ -43,9 +48,6 @@ export const MODULE_DEFAULTS = {
   npcBuffer: false,
   npcEnchanter: false,
 } as const
-
-import { T } from '@start9labs/start-sdk'
-import { sdk } from './sdk'
 
 // A realm address must be a plain IPv4/IPv6 literal or DNS hostname. Reject
 // anything outside this charset so it can't break out of the SQL string it's
@@ -95,4 +97,43 @@ export async function resolveRealmHost(
     })
     .once()
   return resolved ?? '127.0.0.1'
+}
+
+// Connect to the running MySQL daemon from an action context. Actions don't
+// share the daemon's loopback, so (as the Minecraft package does for RCON) we
+// try 127.0.0.1, then the container IP, then the OS IP.
+export async function dbConnect(
+  effects: T.Effects,
+  database?: string,
+): Promise<Connection> {
+  const password = (await storeJson.read((s) => s.dbPassword).once()) ?? ''
+  const hosts = ['127.0.0.1']
+  const [containerIp, osIp] = await Promise.all([
+    effects.getContainerIp({}).catch(() => null),
+    effects.getOsIp().catch(() => null),
+  ])
+  for (const h of [containerIp, osIp]) {
+    if (h && !hosts.includes(h)) hosts.push(h)
+  }
+
+  let lastErr: unknown
+  for (const host of hosts) {
+    try {
+      return await createConnection({
+        host,
+        port: dbPort,
+        user: 'root',
+        password,
+        database,
+        connectTimeout: 5_000,
+      })
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw new Error(
+    `Could not connect to the database. ${
+      lastErr instanceof Error ? lastErr.message : String(lastErr)
+    }`,
+  )
 }
