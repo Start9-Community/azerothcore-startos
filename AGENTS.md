@@ -27,4 +27,4 @@ verified, tried, and decided belongs in the commit message and the PR body.
 ## This repo
 
 - **Two flavors share the `azerothcore` package id across two long-lived branches** — `main` (this one: vanilla, upstream's prebuilt images) and `playerbots` (the mod-playerbots fork, built from source). There is no build flag: work on the flavor whose branch you are on, and don't unify the id apart, because sharing it is what lets a user switch flavors and keep their world and characters.
-- **`db.ts` tries three hosts on purpose.** An action does not share the daemon's loopback, so a connection to `127.0.0.1` alone fails from action context — it falls back to the container IP and then the OS IP, the same way `minecraft-startos` reaches RCON. Don't simplify it to one host.
+- **`dbConnect` (`utils.ts`) tries three hosts on purpose.** An action does not share the daemon's loopback, so a connection to `127.0.0.1` alone fails from action context — it falls back to the container IP and then the OS IP, the same way `minecraft-startos` reaches RCON. Don't simplify it to one host.
