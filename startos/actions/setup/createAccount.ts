@@ -1,8 +1,7 @@
 import { sdk } from '../../sdk'
 import { i18n } from '../../i18n'
-import { dbConnect } from '../../db'
 import { computeVerifier, makeSalt } from '../../srp6'
-import { dbName } from '../../utils'
+import { dbConnect, dbName } from '../../utils'
 
 const { InputSpec, Value } = sdk
 
