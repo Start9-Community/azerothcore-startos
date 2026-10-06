@@ -149,7 +149,7 @@ Creates a WoW login account, optionally with Game Master privileges. Run it once
 - **Repeat safety:** **not** idempotent — a second run with an existing account name fails rather than overwriting it. There is no action to change or reset a password.
 - **Cost:** immediate; no restart.
 
-Account names are upper-cased before insert, matching AzerothCore's own convention, and the password is stored as an SRP6 salt and verifier computed in-package. No SOAP interface is enabled and none is needed, which is what allows the _first_ account to be created without an existing Game Master.
+Account names are upper-cased before insert, matching AzerothCore's own convention, and the password is stored as an SRP6 salt and verifier computed in-package from its upper-cased form, so neither is case-sensitive at login. No SOAP interface is enabled and none is needed, which is what allows the _first_ account to be created without an existing Game Master.
 
 ## Tasks
 

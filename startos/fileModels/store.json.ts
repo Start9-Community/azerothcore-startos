@@ -5,7 +5,7 @@ export const defaultRealmName = 'AzerothCore'
 
 // Package-internal state. Written only by our init + actions, so .const()
 // gives automatic restart-on-change.
-const storeConfigSchema = z.object({
+const storeConfigSchema = z.looseObject({
   // Generated once at install, root password for the bundled MySQL.
   dbPassword: z.string().catch(''),
   // Display name of the realm shown in the client's realm list.

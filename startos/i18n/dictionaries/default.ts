@@ -21,11 +21,11 @@ const dict = {
 
   // createAccount.ts
   'Account Name': 50,
-  'The login name for the new WoW account': 51,
+  'Not case-sensitive; it is saved in capitals.': 51,
   Password: 52,
-  'Account password': 53,
+  'Not case-sensitive: the 3.3.5a login checks passwords in capitals.': 53,
   'GM Level': 54,
-  'Game Master privilege level for this account': 55,
+  'Which in-game commands the account can use. Each command has a minimum level, so a higher level keeps everything a lower one has.\n- Player (0): an ordinary player account\n- Moderator (1): adds the level 1 commands\n- Game Master (2): adds the level 2 commands\n- Administrator (3): adds the level 3 commands, the highest level this action grants': 55,
   'Player (0)': 56,
   'Moderator (1)': 57,
   'Game Master (2)': 58,
@@ -47,7 +47,7 @@ const dict = {
   'Choose which address clients use to connect to the world server': 81,
   'Changing this restarts the server.': 82,
   'Realm Address': 85,
-  'The address (LAN IP or hostname) game clients connect to. For home LAN play use your local 192.168.x.x address. Check the Connection Info action to see all available addresses.': 86,
+  "The address (LAN IP or hostname) game clients connect to. For home LAN play use your local 192.168.x.x address. The Auth Server interface lists this server's addresses.": 86,
   'Realm Address Updated': 87,
   'The server is restarting. Set your client realmlist.wtf to this same address.': 88,
 } as const

@@ -18,13 +18,22 @@ Freshly scaffolded? Work the
 guide page, not a file in this repo — read it, don't copy it in.
 
 Keep `README.md` (technical reference for an AI support or administering agent) and
-`instructions.md` (end-user docs) in sync with your changes.
+`instructions.md` (end-user docs) in sync with your changes. This file restates neither:
+whoever changes the package has both, so it carries only what they don't — repo mechanics,
+a change that looks right and is not, where the next thing gets added, a naming trap, a
+build or test invocation particular to this repo.
 
-**Bugs and feature requests are GitHub issues on this repo** — file them as you find them.
+**Fix a defect you spot rather than reporting it** — you have the package open and the
+context to be sure. File **a GitHub issue on this repo** only when the call isn't yours to
+make: you can't pin the cause down, two defensible fixes exist, or it's too large to ride on
+the work in hand. An open issue is a report, not a queue — implement one when you're asked
+to or when it's labelled `Approved`, then close it with `Closes #<n>`.
+
 Don't record work in the repo instead: no `TODO.md`, no `NOTES.md`, no `PLAN.md`. What you
 verified, tried, and decided belongs in the commit message and the PR body.
 
 ## This repo
 
-- **Two flavors share the `azerothcore` package id across two long-lived branches** — `main` (this one: vanilla, upstream's prebuilt images) and `playerbots` (the mod-playerbots fork, built from source). There is no build flag: work on the flavor whose branch you are on, and don't unify the id apart, because sharing it is what lets a user switch flavors and keep their world and characters.
-- **`dbConnect` (`utils.ts`) tries three hosts on purpose.** An action does not share the daemon's loopback, so a connection to `127.0.0.1` alone fails from action context — it falls back to the container IP and then the OS IP, the same way `minecraft-startos` reaches RCON. Don't simplify it to one host.
+- **Two flavors share the `azerothcore` id on long-lived branches:** `main` (vanilla, upstream's prebuilt images) and `playerbots` (the mod-playerbots fork, built from source). Port a shared change to both branches, and never give a flavor its own id: the shared id is what lets a user switch flavors in place and keep their world and characters.
+- **Keep `store.json`'s shapes `z.looseObject`.** After a flavor switch the file carries the other flavor's keys, and a strict shape deletes them on the next write.
+- **Don't reduce `dbConnect` (`utils.ts`) to one host.** An action does not share the daemon's loopback, so `127.0.0.1` alone fails there; it falls back to the container IP, then the OS IP.
