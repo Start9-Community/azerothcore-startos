@@ -6,7 +6,7 @@ export const defaultRealmName = 'AzerothCore'
 
 // Package-internal state. Written only by our init + actions, so .const()
 // gives automatic restart-on-change.
-const storeConfigSchema = z.object({
+const storeConfigSchema = z.looseObject({
   // Generated once at install, root password for the bundled MySQL.
   dbPassword: z.string().catch(''),
   // Display name of the realm shown in the client's realm list.
@@ -18,7 +18,7 @@ const storeConfigSchema = z.object({
   // Playerbots settings. Enabled by default; turning it off makes the server
   // behave like the vanilla flavor.
   playerbots: z
-    .object({
+    .looseObject({
       enabled: z.boolean().catch(PLAYERBOTS_DEFAULTS.enabled),
       minBots: z.number().int().catch(PLAYERBOTS_DEFAULTS.minBots),
       maxBots: z.number().int().catch(PLAYERBOTS_DEFAULTS.maxBots),
@@ -27,7 +27,7 @@ const storeConfigSchema = z.object({
   // Optional gameplay modules (compiled in, off by default). Toggled via the
   // Modules action; behavior applies to GM accounts only.
   modules: z
-    .object({
+    .looseObject({
       autoRevive: z.boolean().catch(MODULE_DEFAULTS.autoRevive),
       transmog: z.boolean().catch(MODULE_DEFAULTS.transmog),
       learnSpells: z.boolean().catch(MODULE_DEFAULTS.learnSpells),

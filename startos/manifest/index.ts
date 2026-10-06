@@ -28,7 +28,11 @@ export const manifest = setupManifest({
   },
   volumes: ['main'],
   images: {
-    database: { source: { dockerTag: MYSQL }, arch: ARCH_X86 },
+    database: {
+      source: { dockerTag: MYSQL },
+      arch: ARCH_X86,
+      emulateMissing: false,
+    },
     // The mod-playerbots fork, compiled from source at pack time (auth + world +
     // db-import in one image). The fork/module commits are pinned in
     // Dockerfile.playerbots. The first build is slow; Docker layer-caches the
@@ -36,8 +40,12 @@ export const manifest = setupManifest({
     acore: {
       source: { dockerBuild: { dockerfile: './Dockerfile.playerbots' } },
       arch: ARCH_X86,
+      emulateMissing: false,
     },
-    'client-data': { source: { dockerTag: AC_CLIENT_DATA }, arch: ARCH_X86 },
+    'client-data': {
+      source: { dockerTag: AC_CLIENT_DATA },
+      arch: ARCH_X86,
+      emulateMissing: false,
+    },
   },
-  dependencies: {},
 })

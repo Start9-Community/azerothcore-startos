@@ -155,7 +155,7 @@ Creates a WoW login account, optionally with Game Master privileges. Run it once
 - **Repeat safety:** **not** idempotent — a second run with an existing account name fails rather than overwriting it. There is no action to change or reset a password.
 - **Cost:** immediate; no restart.
 
-Account names are upper-cased before insert, matching AzerothCore's own convention, and the password is stored as an SRP6 salt and verifier computed in-package. No SOAP interface is enabled and none is needed, which is what allows the _first_ account to be created without an existing Game Master.
+Account names are upper-cased before insert, matching AzerothCore's own convention, and the password is stored as an SRP6 salt and verifier computed in-package from its upper-cased form, so neither is case-sensitive at login. No SOAP interface is enabled and none is needed, which is what allows the _first_ account to be created without an existing Game Master.
 
 ### Playerbots Settings
 
@@ -163,6 +163,7 @@ Turns the bots on or off and sets the random-bot population. Run it to make the 
 
 - **What it changes:** the `playerbots` block in the store, which becomes the fork's bot environment variables at start-up.
 - **Cost:** **it restarts the service**, and the bot population then rebuilds toward the new minimum over time rather than immediately.
+- **Population:** the fork keeps a random number of bots online between the minimum and the maximum, and picks it again from time to time; equal values give a fixed population.
 - **Repeat safety:** idempotent. A minimum above the maximum is silently swapped rather than rejected, and the action's result says so.
 - **What happens next:** disabling leaves the existing bot characters in the database, dormant — nothing is deleted, and re-enabling brings the same population back.
 - **Sizing:** each bot costs roughly 10–20 MB of RAM, so the population bound is effectively a memory budget. This is the setting to lower first on a box under memory pressure.
