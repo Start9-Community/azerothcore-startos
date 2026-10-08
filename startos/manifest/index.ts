@@ -35,11 +35,30 @@ export const manifest = setupManifest({
   },
   volumes: ['main'],
   images: {
-    database: { source: { dockerTag: MYSQL }, arch: ARCH_X86 },
-    authserver: { source: { dockerTag: AC_AUTHSERVER }, arch: ARCH_X86 },
-    worldserver: { source: { dockerTag: AC_WORLDSERVER }, arch: ARCH_X86 },
-    'db-import': { source: { dockerTag: AC_DB_IMPORT }, arch: ARCH_X86 },
-    'client-data': { source: { dockerTag: AC_CLIENT_DATA }, arch: ARCH_X86 },
+    database: {
+      source: { dockerTag: MYSQL },
+      arch: ARCH_X86,
+      emulateMissing: false,
+    },
+    authserver: {
+      source: { dockerTag: AC_AUTHSERVER },
+      arch: ARCH_X86,
+      emulateMissing: false,
+    },
+    worldserver: {
+      source: { dockerTag: AC_WORLDSERVER },
+      arch: ARCH_X86,
+      emulateMissing: false,
+    },
+    'db-import': {
+      source: { dockerTag: AC_DB_IMPORT },
+      arch: ARCH_X86,
+      emulateMissing: false,
+    },
+    'client-data': {
+      source: { dockerTag: AC_CLIENT_DATA },
+      arch: ARCH_X86,
+      emulateMissing: false,
+    },
   },
-  dependencies: {},
 })
