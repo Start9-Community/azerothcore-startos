@@ -18,17 +18,24 @@ Freshly scaffolded? Work the
 guide page, not a file in this repo — read it, don't copy it in.
 
 Keep `README.md` (technical reference for an AI support or administering agent) and
-`instructions.md` (end-user docs) in sync with your changes.
+`instructions.md` (end-user docs) in sync with your changes. This file restates neither:
+whoever changes the package has both, so it carries only what they don't — repo mechanics,
+a change that looks right and is not, where the next thing gets added, a naming trap, a
+build or test invocation particular to this repo.
 
-**Bugs and feature requests are GitHub issues on this repo** — file them as you find them.
+**Fix a defect you spot rather than reporting it** — you have the package open and the
+context to be sure. File **a GitHub issue on this repo** only when the call isn't yours to
+make: you can't pin the cause down, two defensible fixes exist, or it's too large to ride on
+the work in hand. An open issue is a report, not a queue — implement one when you're asked
+to or when it's labelled `Approved`, then close it with `Closes #<n>`.
+
 Don't record work in the repo instead: no `TODO.md`, no `NOTES.md`, no `PLAN.md`. What you
 verified, tried, and decided belongs in the commit message and the PR body.
 
 ## This repo
 
-- **Two flavors share the `azerothcore` package id across two long-lived branches** — `main` (vanilla, upstream's prebuilt images) and `playerbots` (this one: the mod-playerbots fork, built from source via `Dockerfile.playerbots`). There is no build flag: work on the flavor whose branch you are on, and don't split the id apart, because sharing it is what lets a user switch flavors and keep their world and characters.
-- **Don't delete the `create-dbs` oneshot as redundant with `db-import`.** The fork's auto-create makes only the first database; without `create-dbs`, `db-import` finds three of the four missing.
-- **Adding a module is four edits, not one.** Pin it in `Dockerfile.playerbots` (they compile in — AzerothCore modules are not runtime-loadable), add its default to `MODULE_DEFAULTS` in `utils.ts`, map it to its `AC_*` flag in `main.ts`, and add the toggle to `configureModules.ts`. The env name is the module's config key with camelCase split by underscores, and the value type is not uniform — `IndividualXp.Enabled` takes `true`/`false` where the rest take `1`/`0`.
-- **`AC_UPDATES_ENABLE_DATABASES` is a bitmask and it is set twice on purpose.** `dbimport` gets `15` (all four databases) plus `AC_FORCE_CREATE_DB`; the long-running servers get `0`. Both override the image's own ENV, and letting a server inherit a nonzero value would let it migrate the schema out from under the importer.
-- **`dbConnect` (`utils.ts`) tries three hosts on purpose.** An action does not share the daemon's loopback, so a connection to `127.0.0.1` alone fails from action context — it falls back to the container IP and then the OS IP, the same way `minecraft-startos` reaches RCON. Don't simplify it to one host.
-- **`FREE_DISK_SPACE: true` stays on in all three CI workflows here**, because this flavor compiles the fork from source. Don't mirror it onto the vanilla `main` branch, which pulls prebuilt images and has never needed it.
+- **Two flavors share the `azerothcore` id on long-lived branches:** `main` (vanilla, upstream's prebuilt images) and `playerbots` (this one: the mod-playerbots fork, built from source via `Dockerfile.playerbots`). Port a shared change to both branches, and never give a flavor its own id: the shared id is what lets a user switch flavors in place and keep their world and characters. `FREE_DISK_SPACE: true` stays on in all four build callers here, for the source build; don't mirror it onto `main`.
+- **Keep `store.json`'s shapes `z.looseObject`.** After a flavor switch the file carries the other flavor's keys, and a strict shape deletes them on the next write.
+- **Don't drop the `create-dbs` oneshot or align the two `AC_UPDATES_ENABLE_DATABASES` values.** The fork's auto-create makes only the first database, so `db-import` needs the other three created first. `dbimport` gets the bitmask `15` (all four databases) plus `AC_FORCE_CREATE_DB`, and the long-running servers get `0`, so they never migrate the schema out from under the importer.
+- **Adding a module is four edits.** Pin it in `Dockerfile.playerbots` (modules compile in), add its default to `MODULE_DEFAULTS` in `utils.ts`, map it to its `AC_*` flag in `main.ts`, and add the toggle to `configureModules.ts`. The env name is the module's config key with camelCase split by underscores, and the value type is not uniform: `IndividualXp.Enabled` takes `true`/`false` where the rest take `1`/`0`.
+- **Don't reduce `dbConnect` (`utils.ts`) to one host.** An action does not share the daemon's loopback, so `127.0.0.1` alone fails there; it falls back to the container IP, then the OS IP.

@@ -8,20 +8,24 @@ const { InputSpec, Value } = sdk
 const inputSpec = InputSpec.of({
   username: Value.text({
     name: i18n('Account Name'),
-    description: i18n('The login name for the new WoW account'),
+    description: i18n('Not case-sensitive; it is saved in capitals.'),
     required: true,
     default: null,
   }),
   password: Value.text({
     name: i18n('Password'),
-    description: i18n('Account password'),
+    description: i18n(
+      'Not case-sensitive: the 3.3.5a login checks passwords in capitals.',
+    ),
     required: true,
     default: null,
     masked: true,
   }),
   gmLevel: Value.select({
     name: i18n('GM Level'),
-    description: i18n('Game Master privilege level for this account'),
+    description: i18n(
+      'Which in-game commands the account can use. Each command has a minimum level, so a higher level keeps everything a lower one has.\n- Player (0): an ordinary player account\n- Moderator (1): adds the level 1 commands\n- Game Master (2): adds the level 2 commands\n- Administrator (3): adds the level 3 commands, the highest level this action grants',
+    ),
     default: '0',
     values: {
       '0': i18n('Player (0)'),

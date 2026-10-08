@@ -15,7 +15,9 @@ const inputSpec = InputSpec.of({
   }),
   minBots: Value.number({
     name: i18n('Minimum Random Bots'),
-    description: i18n('Lower bound of the random bot population.'),
+    description: i18n(
+      'The number of bots online is a random pick between this and the maximum, picked again from time to time. Set both to the same value for a fixed population.',
+    ),
     required: true,
     default: 20,
     integer: true,
@@ -25,7 +27,7 @@ const inputSpec = InputSpec.of({
   maxBots: Value.number({
     name: i18n('Maximum Random Bots'),
     description: i18n(
-      'Upper bound of the random bot population. More bots = more RAM (~10-20MB each).',
+      'The top of that range. Every bot is a logged-in character on the world server, so lower this first if the server is short of memory.',
     ),
     required: true,
     default: 40,

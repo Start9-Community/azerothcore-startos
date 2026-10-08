@@ -42,7 +42,7 @@ const inputSpec = InputSpec.of({
   npcBuffer: Value.toggle({
     name: i18n('Buff NPC'),
     description: i18n(
-      'Adds an NPC that applies common buffs on demand. Handy for solo/small groups missing buff classes.',
+      'Adds an NPC that applies common buffs on demand, for players without a class in the group that casts them.',
     ),
     default: false,
   }),

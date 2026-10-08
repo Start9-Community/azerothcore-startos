@@ -9,7 +9,7 @@ const inputSpec = InputSpec.of({
   realmAddress: Value.text({
     name: i18n('Realm Address'),
     description: i18n(
-      'The address (LAN IP or hostname) game clients connect to. For home LAN play use your local 192.168.x.x address. Check the Connection Info action to see all available addresses.',
+      "The address (LAN IP or hostname) game clients connect to. For home LAN play use your local 192.168.x.x address. The Auth Server interface lists this server's addresses.",
     ),
     required: true,
     default: null,
