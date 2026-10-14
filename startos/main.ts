@@ -74,6 +74,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
     AC_PLAYERBOTS_DATABASE_INFO: conn(dbName.playerbots),
     AC_DATA_DIR: '/azerothcore/env/dist/data',
     AC_CONSOLE_ENABLE: '0',
+    // Warden is an anti-cheat that streams a compiled Windows module to every
+    // client and has it execute there. That is pointless on a private realm,
+    // and `Warden.ClientCheckFailAction` does not prevent it: the module is
+    // sent from WardenWin::Init regardless, and the action only decides what
+    // happens once a check fails. Off means the module is never sent.
+    AC_WARDEN_ENABLED: '0',
     // AzerothCore env names split camelCase with underscores:
     // AiPlayerbot.Enabled -> AC_AI_PLAYERBOT_ENABLED, etc.
     AC_AI_PLAYERBOT_ENABLED: botsOn ? '1' : '0',
