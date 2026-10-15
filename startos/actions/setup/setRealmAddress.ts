@@ -54,6 +54,7 @@ export const setRealmAddress = sdk.Action.withInput(
         copyable: true,
         qr: false,
         masked: false,
+        launchable: false,
       },
     }
   },
