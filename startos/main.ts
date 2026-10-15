@@ -27,17 +27,56 @@ const CLIENT_DATA_CMD: [string, ...string[]] = [
   'source /azerothcore/apps/installer/includes/functions.sh && inst_download_client_data',
 ]
 
-// Run an AC binary through the consolidated fork image entrypoint.
+// Secrets must never travel through `exec.env`. The SDK turns every entry into
+// a `--env=KEY=VALUE` argument on `start-container`, and /proc/<pid>/cmdline is
+// world-readable, so a password passed that way is visible to every local user
+// for as long as the process runs. Each secret goes into a 0600 file in the
+// subcontainer's own rootfs instead -- never the `main` volume, which is backed
+// up -- and only the path travels in argv. `/etc` is used because neither image
+// mounts over it.
+const AC_DB_ENV = '/etc/ac-db.env'
+const MYSQL_PW_FILE = '/etc/mysql-root-pw'
+const MYSQL_CNF = '/etc/mysql-client.cnf'
+
+// Matches DOCKER_USER in Dockerfile.playerbots, which the image's USER sets.
+const acoreUser = 'acore'
+
+// Write a secret into a subcontainer before its command runs. writeFile runs as
+// root, so a file the command must read as a non-root user needs chown.
+const writeSecret = async (
+  sub: {
+    writeFile: (
+      path: string,
+      body: string,
+      opts: { mode: number },
+    ) => Promise<void>
+    exec: (cmd: string[], opts?: { user?: string }) => Promise<unknown>
+  },
+  path: string,
+  body: string,
+  owner?: string,
+) => {
+  await sub.writeFile(path, body, { mode: 0o600 })
+  if (owner)
+    await sub.exec(['chown', `${owner}:${owner}`, path], { user: 'root' })
+}
+
+// Run an AC binary through the consolidated fork image entrypoint. AzerothCore
+// has no file-based equivalent for the *_DATABASE_INFO settings, so the command
+// sources them; the file holds `export` lines.
 const acoreCmd = (binary: string): [string, ...string[]] => [
   '/usr/bin/env',
   'bash',
-  '/azerothcore/entrypoint.sh',
-  `/azerothcore/env/dist/bin/${binary}`,
+  '-c',
+  `. ${AC_DB_ENV}; exec bash /azerothcore/entrypoint.sh ` +
+    `/azerothcore/env/dist/bin/${binary}`,
 ]
 
-const mysqlExec = (pw: string, sql: string) => ({
+// The password comes from MYSQL_CNF, written into the subcontainer beforehand.
+const mysqlExec = (sql: string) => ({
   command: [
     'mysql',
+    `--defaults-extra-file=${MYSQL_CNF}`,
     '-h',
     '127.0.0.1',
     '-P',
@@ -46,9 +85,6 @@ const mysqlExec = (pw: string, sql: string) => ({
     '-e',
     sql,
   ] as [string, ...string[]],
-  // Pass the root password via env, not argv, so it never appears in the
-  // process list.
-  env: { MYSQL_PWD: pw },
 })
 
 export const main = sdk.setupMain(async ({ effects }) => {
@@ -62,18 +98,38 @@ export const main = sdk.setupMain(async ({ effects }) => {
   )
   console.log(`Realm address resolved to ${host}`)
 
-  const dbEnv = { MYSQL_ROOT_PASSWORD: store.dbPassword }
+  // The mysql image resolves MYSQL_ROOT_PASSWORD from a *_FILE variant
+  // (file_env in its docker-entrypoint.sh), so only the path is passed.
+  const dbEnv = { MYSQL_ROOT_PASSWORD_FILE: MYSQL_PW_FILE }
   const conn = (name: string) =>
     `127.0.0.1;${dbPort};root;${store.dbPassword};${name}`
 
+  // Sourced from AC_DB_ENV rather than passed as env. Single quotes are safe:
+  // dbPassword is generated from `a-z,A-Z,0-9` (see init/initializeService.ts),
+  // so it cannot contain a quote, and the values' own `;` separators would
+  // otherwise be read as shell command separators.
+  const acDbEnvFile =
+    Object.entries({
+      AC_LOGIN_DATABASE_INFO: conn(dbName.auth),
+      AC_WORLD_DATABASE_INFO: conn(dbName.world),
+      AC_CHARACTER_DATABASE_INFO: conn(dbName.characters),
+      AC_PLAYERBOTS_DATABASE_INFO: conn(dbName.playerbots),
+    })
+      .map(([k, v]) => `export ${k}='${v}'`)
+      .join('\n') + '\n'
+
+  const mysqlCnfFile = `[client]\npassword=${store.dbPassword}\n`
+
   const botsOn = store.playerbots.enabled
   const serverEnv = {
-    AC_LOGIN_DATABASE_INFO: conn(dbName.auth),
-    AC_WORLD_DATABASE_INFO: conn(dbName.world),
-    AC_CHARACTER_DATABASE_INFO: conn(dbName.characters),
-    AC_PLAYERBOTS_DATABASE_INFO: conn(dbName.playerbots),
     AC_DATA_DIR: '/azerothcore/env/dist/data',
     AC_CONSOLE_ENABLE: '0',
+    // Warden is an anti-cheat that streams a compiled Windows module to every
+    // client and has it execute there. That is pointless on a private realm,
+    // and `Warden.ClientCheckFailAction` does not prevent it: the module is
+    // sent from WardenWin::Init regardless, and the action only decides what
+    // happens once a check fails. Off means the module is never sent.
+    AC_WARDEN_ENABLED: '0',
     // AzerothCore env names split camelCase with underscores:
     // AiPlayerbot.Enabled -> AC_AI_PLAYERBOT_ENABLED, etc.
     AC_AI_PLAYERBOT_ENABLED: botsOn ? '1' : '0',
@@ -143,20 +199,71 @@ export const main = sdk.setupMain(async ({ effects }) => {
       }),
   }
 
+  // Built up front rather than inline in the chain because each needs its
+  // secret file written before its command runs.
+  const databaseSub = sdk.SubContainer.of(
+    effects,
+    { imageId: 'database' },
+    sdk.Mounts.of().mountVolume({
+      volumeId: 'main',
+      subpath: 'mysql',
+      mountpoint: '/var/lib/mysql',
+      readonly: false,
+    }),
+    'database-sub',
+  )
+  await writeSecret(databaseSub, MYSQL_PW_FILE, store.dbPassword)
+
+  const createDbsSub = sdk.SubContainer.of(
+    effects,
+    { imageId: 'database' },
+    null,
+    'create-dbs-sub',
+  )
+  await writeSecret(createDbsSub, MYSQL_CNF, mysqlCnfFile)
+
+  const realmConfigSub = sdk.SubContainer.of(
+    effects,
+    { imageId: 'database' },
+    null,
+    'realm-config-sub',
+  )
+  await writeSecret(realmConfigSub, MYSQL_CNF, mysqlCnfFile)
+
+  // The acore image runs as `acore`, so the sourced file must be chowned to it.
+  const dbImportSub = sdk.SubContainer.of(
+    effects,
+    { imageId: 'acore' },
+    null,
+    'db-import-sub',
+  )
+  await writeSecret(dbImportSub, AC_DB_ENV, acDbEnvFile, acoreUser)
+
+  const authserverSub = sdk.SubContainer.of(
+    effects,
+    { imageId: 'acore' },
+    null,
+    'authserver-sub',
+  )
+  await writeSecret(authserverSub, AC_DB_ENV, acDbEnvFile, acoreUser)
+
+  const worldserverSub = sdk.SubContainer.of(
+    effects,
+    { imageId: 'acore' },
+    sdk.Mounts.of().mountVolume({
+      volumeId: 'main',
+      subpath: 'data',
+      mountpoint: '/azerothcore/env/dist/data',
+      readonly: true,
+    }),
+    'worldserver-sub',
+  )
+  await writeSecret(worldserverSub, AC_DB_ENV, acDbEnvFile, acoreUser)
+
   return (
     sdk.Daemons.of(effects)
       .addDaemon('database', {
-        subcontainer: sdk.SubContainer.of(
-          effects,
-          { imageId: 'database' },
-          sdk.Mounts.of().mountVolume({
-            volumeId: 'main',
-            subpath: 'mysql',
-            mountpoint: '/var/lib/mysql',
-            readonly: false,
-          }),
-          'database-sub',
-        ),
+        subcontainer: databaseSub,
         exec: { command: sdk.useEntrypoint(), env: dbEnv },
         ready: dbReady,
         requires: [],
@@ -184,14 +291,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
       // Create all databases up front (the fork's auto-create only makes the
       // first one). db-import then populates auth/world/characters/playerbots.
       .addOneshot('create-dbs', {
-        subcontainer: sdk.SubContainer.of(
-          effects,
-          { imageId: 'database' },
-          null,
-          'create-dbs-sub',
-        ),
+        subcontainer: createDbsSub,
         exec: mysqlExec(
-          store.dbPassword,
           Object.values(dbName)
             .map(
               (db) =>
@@ -203,48 +304,23 @@ export const main = sdk.setupMain(async ({ effects }) => {
         requires: ['database'],
       })
       .addOneshot('db-import', {
-        subcontainer: sdk.SubContainer.of(
-          effects,
-          { imageId: 'acore' },
-          null,
-          'db-import-sub',
-        ),
+        subcontainer: dbImportSub,
         exec: exec('dbimport'),
         requires: ['database', 'create-dbs'],
       })
       .addOneshot('realm-config', {
-        subcontainer: sdk.SubContainer.of(
-          effects,
-          { imageId: 'database' },
-          null,
-          'realm-config-sub',
-        ),
-        exec: mysqlExec(store.dbPassword, realmSql),
+        subcontainer: realmConfigSub,
+        exec: mysqlExec(realmSql),
         requires: ['db-import'],
       })
       .addDaemon('authserver', {
-        subcontainer: sdk.SubContainer.of(
-          effects,
-          { imageId: 'acore' },
-          null,
-          'authserver-sub',
-        ),
+        subcontainer: authserverSub,
         exec: exec('authserver'),
         ready: authReady,
         requires: ['realm-config'],
       })
       .addDaemon('worldserver', {
-        subcontainer: sdk.SubContainer.of(
-          effects,
-          { imageId: 'acore' },
-          sdk.Mounts.of().mountVolume({
-            volumeId: 'main',
-            subpath: 'data',
-            mountpoint: '/azerothcore/env/dist/data',
-            readonly: true,
-          }),
-          'worldserver-sub',
-        ),
+        subcontainer: worldserverSub,
         exec: exec('worldserver'),
         ready: worldReady,
         requires: ['db-import', 'client-data', 'create-dbs'],

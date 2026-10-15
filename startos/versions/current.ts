@@ -1,23 +1,18 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '#playerbots:16.0.0:6',
+  version: '#playerbots:16.0.0:7',
   releaseNotes: {
-    en_US: `- Create Account's GM Level explains each level, and the account name and password fields say they are not case-sensitive.
-- Set Realm Address's field points to the Auth Server interface for this server's addresses.
-- Playerbots Settings explains how the minimum and maximum set the number of bots online.`,
-    es_ES: `- El nivel de GM de Create Account explica cada nivel, y los campos de nombre de cuenta y contraseña indican que no distinguen mayúsculas de minúsculas.
-- El campo de Set Realm Address remite a la interfaz Auth Server para ver las direcciones de este servidor.
-- Playerbots Settings explica cómo el mínimo y el máximo determinan el número de bots conectados.`,
-    de_DE: `- Die GM-Stufe in Create Account erklärt jede Stufe, und die Felder für Kontoname und Passwort geben an, dass Groß- und Kleinschreibung keine Rolle spielt.
-- Das Feld von Set Realm Address verweist für die Adressen dieses Servers auf die Schnittstelle Auth Server.
-- Playerbots Settings erklärt, wie Minimum und Maximum die Zahl der angemeldeten Bots bestimmen.`,
-    pl_PL: `- Poziom GM w Create Account wyjaśnia każdy poziom, a pola nazwy konta i hasła informują, że wielkość liter nie ma znaczenia.
-- Pole Set Realm Address odsyła do interfejsu Auth Server, gdzie widać adresy tego serwera.
-- Playerbots Settings wyjaśnia, jak minimum i maksimum wyznaczają liczbę botów online.`,
-    fr_FR: `- Le niveau GM de Create Account explique chaque niveau, et les champs du nom de compte et du mot de passe indiquent qu'ils ne sont pas sensibles à la casse.
-- Le champ de Set Realm Address renvoie à l'interface Auth Server pour les adresses de ce serveur.
-- Playerbots Settings explique comment le minimum et le maximum fixent le nombre de bots connectés.`,
+    en_US: `- Warden is now off. It is an anti-cheat that has every client download and run a module sent by the server, which serves no purpose on a private realm.
+- Database credentials are no longer passed on the command line, where any user with access to the server could read them from the process list.`,
+    es_ES: `- Warden ahora está desactivado. Es un antitrampas que hace que cada cliente descargue y ejecute un módulo enviado por el servidor, lo cual no tiene sentido en un reino privado.
+- Las credenciales de la base de datos ya no se pasan en la línea de comandos, donde cualquier usuario con acceso al servidor podía leerlas en la lista de procesos.`,
+    de_DE: `- Warden ist jetzt deaktiviert. Dieses Anti-Cheat lässt jeden Client ein vom Server gesendetes Modul herunterladen und ausführen, was auf einem privaten Realm keinen Zweck hat.
+- Die Datenbank-Anmeldedaten werden nicht mehr über die Befehlszeile übergeben, wo jeder Benutzer mit Zugriff auf den Server sie in der Prozessliste lesen konnte.`,
+    pl_PL: `- Warden jest teraz wyłączony. To system antycheat, który każe każdemu klientowi pobrać i uruchomić moduł przesłany przez serwer, co na prywatnym realmie nie ma sensu.
+- Dane uwierzytelniające bazy danych nie są już przekazywane w wierszu polecenia, gdzie każdy użytkownik z dostępem do serwera mógł je odczytać z listy procesów.`,
+    fr_FR: `- Warden est désormais désactivé. Cet anti-triche fait télécharger et exécuter par chaque client un module envoyé par le serveur, ce qui n'a aucun intérêt sur un royaume privé.
+- Les identifiants de la base de données ne sont plus transmis en ligne de commande, où tout utilisateur ayant accès au serveur pouvait les lire dans la liste des processus.`,
   },
   migrations: {
     up: async ({ effects }) => {},
