@@ -210,12 +210,14 @@ volumes:
 file_models:
   - start9/store.json
 startos_managed_env_vars:
-  - MYSQL_ROOT_PASSWORD
-  - AC_LOGIN_DATABASE_INFO
-  - AC_WORLD_DATABASE_INFO
-  - AC_CHARACTER_DATABASE_INFO
+  - MYSQL_ROOT_PASSWORD_FILE # path only; see secret_files
   - AC_DATA_DIR
   - AC_CONSOLE_ENABLE
+  - AC_WARDEN_ENABLED
+secret_files: # 0600, written into the subcontainer rootfs, never in argv
+  /etc/mysql-root-pw: MYSQL_ROOT_PASSWORD_FILE # database
+  /etc/mysql-client.cnf: --defaults-extra-file # realm-config
+  /etc/ac-db.env: sourced by the command # AC_*_DATABASE_INFO
 dependencies: []
 interfaces:
   authserver: { type: p2p, port: 3724 }
