@@ -37,7 +37,7 @@ This is the **Playerbots flavor**. It shares the `azerothcore` package id with t
 
 ## Image and Container Runtime
 
-Three images. Two are upstream's, pinned by digest; the third is built from source at pack time, and that is the defining difference from the vanilla flavor.
+Three images. Two are upstream's, pinned by digest, and `client-data` is built on its pin by `Dockerfile.client-data`, which refreshes the CA store its download trusts, a temporary layer that comes out once upstream ships an image built on a fixed store; the third is built from source at pack time, and that is the defining difference from the vanilla flavor.
 
 | Property      | Value                                                       |
 | ------------- | ----------------------------------------------------------- |
@@ -220,7 +220,7 @@ Consequences worth knowing: the backup includes the downloaded client data and e
 
 ```yaml
 package_id: azerothcore # the #playerbots flavor; the main branch is the unflavored one
-image: acore # built from Dockerfile.playerbots; plus mysql, acore/ac-wotlk-client-data
+image: acore # built from Dockerfile.playerbots; plus mysql, acore/ac-wotlk-client-data (+ Dockerfile.client-data CA store upgrade)
 architectures:
   - x86_64
 subcontainers:
