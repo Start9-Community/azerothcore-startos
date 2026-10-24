@@ -1,7 +1,7 @@
 {
   "name": "azerothcore-startos",
   "dependencies": {
-    "@start9labs/start-sdk": "3.0.6",
+    "@start9labs/start-sdk": "3.1.0",
     "mysql2": "^3.22.3"
   },
   "overrides": {

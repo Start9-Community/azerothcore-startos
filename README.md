@@ -37,7 +37,7 @@ This is the **vanilla flavor**. It shares the `azerothcore` package id with the 
 
 ## Image and Container Runtime
 
-Five images, all upstream and unmodified, pinned by immutable digest in the manifest rather than by tag.
+Five images, all upstream, pinned by immutable digest in the manifest rather than by tag. Four run unmodified; `client-data` is built on its pinned image by `Dockerfile.client-data`, which refreshes the CA store its download trusts, a temporary layer that comes out once upstream ships an image built on a fixed store.
 
 | Property      | Value                                                                                                                        |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -192,7 +192,7 @@ Consequences worth knowing: the backup includes the downloaded client data, so i
 
 ```yaml
 package_id: azerothcore # unflavored; the playerbots branch is the #playerbots flavor of this id
-image: acore/ac-wotlk-worldserver # plus authserver, db-import, client-data, mysql
+image: acore/ac-wotlk-worldserver # plus authserver, db-import, client-data (+ Dockerfile.client-data CA store upgrade), mysql
 architectures:
   - x86_64
 subcontainers:
