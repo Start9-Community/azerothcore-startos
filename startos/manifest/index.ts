@@ -43,7 +43,12 @@ export const manifest = setupManifest({
       emulateMissing: false,
     },
     'client-data': {
-      source: { dockerTag: AC_CLIENT_DATA },
+      source: {
+        dockerBuild: {
+          dockerfile: './Dockerfile.client-data',
+          buildArgs: { IMAGE: AC_CLIENT_DATA },
+        },
+      },
       arch: ARCH_X86,
       emulateMissing: false,
     },
