@@ -12,8 +12,8 @@ through those published images.
 ## Determining the upstream version
 
 AzerothCore publishes rolling images under the [`acore` Docker Hub org](https://hub.docker.com/u/acore).
-The pinned tag is in the image digest comment in `startos/manifest/index.ts`
-(`16.0.0-dev` at the last pin). Pick the published `acore/ac-wotlk-*` tag you want
+The pinned tag is the part before `@sha256:` in each image constant in
+`startos/manifest/index.ts`. Pick the published `acore/ac-wotlk-*` tag you want
 to ship.
 
 ## Applying the bump
@@ -30,12 +30,3 @@ to ship.
 2. Update the pinned `<tag>@sha256:<digest>` constants in
    `startos/manifest/index.ts` (`MYSQL`, `AC_AUTHSERVER`, `AC_WORLDSERVER`,
    `AC_DB_IMPORT`, `AC_CLIENT_DATA`).
-
-3. Bump `version` and `releaseNotes` in the file under `startos/versions/`,
-   renaming it to the new version string (e.g. `16.0.0:0` → `16.1.0:0`). A _new_
-   version file is only needed when the bump requires a migration, or when you
-   want the old release notes preserved in git history — see
-   [Versions](https://docs.start9.com/packaging/versions.html).
-
-4. Rebuild (`make`), sideload, and confirm the server starts and a client can
-   connect.
