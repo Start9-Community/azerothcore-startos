@@ -15,14 +15,17 @@ images, pinned by digest in `startos/manifest/index.ts`.
 1. Update `ACORE_COMMIT` / `PLAYERBOTS_COMMIT` in `Dockerfile.playerbots` to the
    commits you want (e.g. the `Playerbot` branch HEAD:
    `git ls-remote https://github.com/mod-playerbots/azerothcore-wotlk.git Playerbot`).
-2. Bump `version` and `releaseNotes` in the file under `startos/versions/`. Keep
-   the `#playerbots:` flavor prefix and the `.satisfies('<vanilla version>')`
-   argument in sync with the vanilla flavor's current version.
-3. Rebuild (`make`), sideload, and confirm the server starts, bots log in, and a
-   client can connect.
+2. Keep the `#playerbots:` flavor prefix on the package version, and the
+   `.satisfies('<vanilla version>')` argument in sync with the vanilla flavor's
+   current version.
 
-> [!NOTE]
-> The first `make` compiles the fork from source and is slow (tens of minutes).
-> Docker layer-caches the build, so later repacks at the same commits are quick.
-> Because of the source compile, signed release builds for this flavor are
-> typically produced locally rather than relying on free CI runners.
+## Bumping the database and client-data images
+
+`MYSQL` and `AC_CLIENT_DATA` in `startos/manifest/index.ts` are pinned as
+`<tag>@sha256:<digest>`, independently of the vanilla flavor's pins. Pick the
+published tag to ship, then resolve its digest:
+
+```sh
+docker buildx imagetools inspect acore/ac-wotlk-client-data:<tag> --format '{{json .Manifest}}' | jq -r .digest
+docker buildx imagetools inspect mysql:8.4 --format '{{json .Manifest}}' | jq -r .digest
+```
