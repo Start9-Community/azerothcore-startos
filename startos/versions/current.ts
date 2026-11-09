@@ -1,13 +1,13 @@
 import { IMPOSSIBLE, VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '#playerbots:16.0.0:8',
+  version: '#playerbots:16.0.0:9',
   releaseNotes: {
-    en_US: `Stops trusting certificates from a compromised certificate authority (eMudhra).`,
-    es_ES: `Deja de confiar en los certificados de una autoridad de certificación comprometida (eMudhra).`,
-    de_DE: `Vertraut Zertifikaten einer kompromittierten Zertifizierungsstelle (eMudhra) nicht mehr.`,
-    pl_PL: `Przestaje ufać certyfikatom przejętego urzędu certyfikacji (eMudhra).`,
-    fr_FR: `Ne fait plus confiance aux certificats d'une autorité de certification compromise (eMudhra).`,
+    en_US: `Game clients can now connect over the server's IPv6 addresses.`,
+    es_ES: `Los clientes del juego ahora pueden conectarse a través de las direcciones IPv6 del servidor.`,
+    de_DE: `Spiel-Clients können sich jetzt über die IPv6-Adressen des Servers verbinden.`,
+    pl_PL: `Klienty gry mogą teraz łączyć się przez adresy IPv6 serwera.`,
+    fr_FR: `Les clients du jeu peuvent désormais se connecter via les adresses IPv6 du serveur.`,
   },
   migrations: {
     up: async ({ effects }) => {},
