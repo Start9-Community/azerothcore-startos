@@ -212,6 +212,7 @@ file_models:
 startos_managed_env_vars:
   - MYSQL_ROOT_PASSWORD_FILE # path only; see secret_files
   - AC_DATA_DIR
+  - AC_BIND_IP
   - AC_CONSOLE_ENABLE
   - AC_WARDEN_ENABLED
 secret_files: # 0600, written into the subcontainer rootfs, never in argv
