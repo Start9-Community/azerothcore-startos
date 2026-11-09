@@ -104,6 +104,8 @@ Two interfaces, both raw TCP. A WoW client contacts the auth server first, and i
 
 Bound on the `auth-multi` and `world-multi` MultiHosts respectively, each requesting its own port number as the external one so a client's hard-coded expectations hold. Neither is masked and neither carries TLS — the game protocol is not HTTP and does not negotiate it.
 
+The game servers listen on `::` for IPv6 and IPv4 connections. `patches/normalize-ipv4-mapped-peers.patch` preserves IPv4 peer identity on the dual-stack socket, keeping existing IP locks and bans effective.
+
 MySQL listens on 3306 inside the service and is never exported.
 
 **The realm list is the reason the address matters more here than for a typical package.** The auth server answers with whatever address `acore_auth.realmlist` holds, and the client then connects to _that_ — so an address that the box can see but the client cannot produces a login that succeeds and a world connection that hangs. That is what [Set Realm Address](#actions) exists to correct.
