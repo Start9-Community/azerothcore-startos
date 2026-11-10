@@ -101,6 +101,8 @@ Two interfaces, both raw TCP. A WoW client contacts the auth server first, and i
 
 Bound on the `auth-multi` and `world-multi` MultiHosts respectively, each requesting its own port number as the external one so a client's hard-coded expectations hold. Neither is masked and neither carries TLS — the game protocol is not HTTP and does not negotiate it.
 
+**Both servers listen on IPv4 only.** Binding `::` would hand IPv4 clients to AzerothCore as `::ffff:a.b.c.d`, which it compares literally against an account's stored `last_ip` and against `ip_banned`; the prebuilt images can't be patched for that, unlike the `playerbots` branch. StartOS still lists the interfaces' IPv6 addresses, and connections to them are refused — use an IPv4 address.
+
 MySQL listens on 3306 inside the service and is never exported.
 
 **The realm list is the reason the address matters more here than for a typical package.** The auth server answers with whatever address `acore_auth.realmlist` holds, and the client then connects to _that_ — so an address that the box can see but the client cannot produces a login that succeeds and a world connection that hangs. That is what [Set Realm Address](#actions) exists to correct.
