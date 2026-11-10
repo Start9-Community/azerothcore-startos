@@ -123,6 +123,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const botsOn = store.playerbots.enabled
   const serverEnv = {
     AC_DATA_DIR: '/azerothcore/env/dist/data',
+    AC_BIND_IP: '::',
     AC_CONSOLE_ENABLE: '0',
     // Warden is an anti-cheat that streams a compiled Windows module to every
     // client and has it execute there. That is pointless on a private realm,

@@ -104,6 +104,8 @@ Two interfaces, both raw TCP. A WoW client contacts the auth server first, and i
 
 Bound on the `auth-multi` and `world-multi` MultiHosts respectively, each requesting its own port number as the external one so a client's hard-coded expectations hold. Neither is masked and neither carries TLS — the game protocol is not HTTP and does not negotiate it.
 
+The game servers listen on `::` for IPv6 and IPv4 connections. Two source patches in `patches/`, applied in the image build, make that safe: `normalize-ipv4-mapped-peers.patch` preserves IPv4 peer identity on the dual-stack socket, keeping existing IP locks and bans effective, and `widen-ip-columns.patch` adds a custom update (`data/sql/custom/db_{auth,characters}/startos_ipv6_ip_columns.sql`) that widens every column storing a client address to `varchar(45)`, so an IPv6 address can be written. `db-import` applies custom updates after upstream's on every start, fresh databases included, and records each by hash so it runs once.
+
 MySQL listens on 3306 inside the service and is never exported.
 
 **The realm list is the reason the address matters more here than for a typical package.** The auth server answers with whatever address `acore_auth.realmlist` holds, and the client then connects to _that_ — so an address that the box can see but the client cannot produces a login that succeeds and a world connection that hangs. That is what [Set Realm Address](#actions) exists to correct.
@@ -213,6 +215,7 @@ Consequences worth knowing: the backup includes the downloaded client data and e
 5. **The interactive world server console is disabled** (`AC_CONSOLE_ENABLE=0`), so console commands are not available and the logs carry only server output.
 6. **There is no password-reset action.** Accounts are created but not otherwise managed by the package.
 7. **Bots are memory-bound, not CPU-bound, in practice.** The population setting is the main lever on this package's footprint.
+8. **The world server address is IPv4.** The auth server accepts IPv6 clients, but it resolves the realm address IPv4-only and hands every client that address for the world connection, so a client with no IPv4 route cannot enter the world.
 
 ---
 
@@ -241,6 +244,7 @@ file_models:
 startos_managed_env_vars:
   - MYSQL_ROOT_PASSWORD_FILE # path only; see secret_files
   - AC_DATA_DIR
+  - AC_BIND_IP
   - AC_CONSOLE_ENABLE
   - AC_WARDEN_ENABLED
   - AC_UPDATES_ENABLE_DATABASES

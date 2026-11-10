@@ -1,0 +1,19 @@
+Retire when the pinned fork normalizes IPv4-mapped peers in GetRemoteIpAddress.
+
+diff --git a/src/server/shared/Network/Socket.h b/src/server/shared/Network/Socket.h
+--- a/src/server/shared/Network/Socket.h
++++ b/src/server/shared/Network/Socket.h
+@@ -104,9 +104,13 @@
+     }
+ 
+     [[nodiscard]] boost::asio::ip::address GetRemoteIpAddress() const
+     {
++        // IPv4-mapped peers retain IPv4 identity for address-based access controls.
++        if (_remoteAddress.is_v6() && _remoteAddress.to_v6().is_v4_mapped())
++            return boost::asio::ip::make_address_v4(
++                boost::asio::ip::v4_mapped, _remoteAddress.to_v6());
+         return _remoteAddress;
+     }
+ 
+     [[nodiscard]] uint16 GetRemotePort() const
+     {

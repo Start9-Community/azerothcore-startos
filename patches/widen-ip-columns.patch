@@ -1,0 +1,23 @@
+Retire when the pinned fork stores IPv6 addresses in its IP columns.
+
+diff --git a/data/sql/custom/db_auth/startos_ipv6_ip_columns.sql b/data/sql/custom/db_auth/startos_ipv6_ip_columns.sql
+new file mode 100644
+index 0000000..e713e11
+--- /dev/null
++++ b/data/sql/custom/db_auth/startos_ipv6_ip_columns.sql
+@@ -0,0 +1,7 @@
++ALTER TABLE `account`
++  MODIFY `last_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '127.0.0.1',
++  MODIFY `last_attempt_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '127.0.0.1';
++ALTER TABLE `ip_banned`
++  MODIFY `ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '127.0.0.1';
++ALTER TABLE `logs_ip_actions`
++  MODIFY `ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '127.0.0.1';
+diff --git a/data/sql/custom/db_characters/startos_ipv6_ip_columns.sql b/data/sql/custom/db_characters/startos_ipv6_ip_columns.sql
+new file mode 100644
+index 0000000..451d772
+--- /dev/null
++++ b/data/sql/custom/db_characters/startos_ipv6_ip_columns.sql
+@@ -0,0 +1,2 @@
++ALTER TABLE `log_arena_memberstats`
++  MODIFY `ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;

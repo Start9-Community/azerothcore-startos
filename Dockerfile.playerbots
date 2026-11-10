@@ -54,12 +54,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Fetch the exact pinned commits (shallow). GitHub allows fetching a specific
 # SHA, so the build always compiles the same source. `clone <repo> <dir> <sha>`
 # fetches one repo at a pinned commit.
+COPY patches/ /tmp/patches/
+
 RUN set -eu; \
     clone() { git init "$2" \
         && git -C "$2" remote add origin "$1" \
         && git -C "$2" fetch --depth=1 origin "$3" \
         && git -C "$2" checkout --detach FETCH_HEAD; }; \
     clone "${ACORE_REPO}" /azerothcore "${ACORE_COMMIT}"; \
+    git -C /azerothcore apply /tmp/patches/*.patch; \
     clone "${PLAYERBOTS_REPO}" /azerothcore/modules/mod-playerbots "${PLAYERBOTS_COMMIT}"; \
     clone "${AUTO_REVIVE_REPO}" /azerothcore/modules/mod-auto-revive "${AUTO_REVIVE_COMMIT}"; \
     clone "${TRANSMOG_REPO}" /azerothcore/modules/mod-transmog "${TRANSMOG_COMMIT}"; \
