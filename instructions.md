@@ -53,8 +53,10 @@ volume. Restore re-creates the realm exactly as it was.
 
 - **Can't connect after editing realmlist**: confirm the address matches the
   Connection Info action exactly, and that your client is version 3.3.5a.
-- **World Server stuck "loading"**: first-boot client-data download in progress;
-  give it a few minutes.
+- **World Server stuck "loading"**: the client-data download is in progress (first
+  boot, or the first start after switching flavor); give it a few minutes. If the
+  logs show `data.zip: FAILED`, the download did not match its expected checksum
+  and was refused; it is retried automatically.
 - **Account creation fails**: the **Create Account** action only works while the
   server is running — wait for the World Server health check to go green, then
   try again.

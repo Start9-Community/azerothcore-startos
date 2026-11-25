@@ -45,14 +45,15 @@ Five images, all upstream, pinned by immutable digest in the manifest rather tha
 | Architectures | x86_64 only                                                                                                                  |
 | Entrypoint    | Upstream's, via `sdk.useEntrypoint()`, for all three daemons                                                                 |
 
-| Subcontainer       | Kind    | Purpose                                                               |
-| ------------------ | ------- | --------------------------------------------------------------------- |
-| `database-sub`     | daemon  | MySQL, holding all three AzerothCore databases                        |
-| `authserver-sub`   | daemon  | Login and realm list — the address a client's `realmlist.wtf` targets |
-| `worldserver-sub`  | daemon  | The game world — attach here for gameplay logs                        |
-| `client-data-sub`  | oneshot | Downloads maps, vmaps, mmaps and DBC on first boot                    |
-| `db-import-sub`    | oneshot | Creates and upgrades the three databases                              |
-| `realm-config-sub` | oneshot | Writes this realm's address into `acore_auth.realmlist`               |
+| Subcontainer       | Kind    | Purpose                                                                |
+| ------------------ | ------- | ---------------------------------------------------------------------- |
+| `database-sub`     | daemon  | MySQL, holding all three AzerothCore databases                         |
+| `authserver-sub`   | daemon  | Login and realm list — the address a client's `realmlist.wtf` targets  |
+| `worldserver-sub`  | daemon  | The game world — attach here for gameplay logs                         |
+| `client-data-sub`  | oneshot | Downloads maps, vmaps, mmaps and DBC, checked against a pinned SHA-256 |
+| `db-import-sub`    | oneshot | Creates and upgrades the three databases                               |
+| `realm-config-sub` | oneshot | Writes this realm's address into `acore_auth.realmlist`                |
+| `db-user-sub`      | oneshot | Creates the `acore` MySQL account the auth and world servers use       |
 
 Digest pins rather than tags mean a given package version always runs the exact image it was tested against, even though upstream's tags are rolling.
 
@@ -60,11 +61,11 @@ Digest pins rather than tags mean a given package version always runs the exact 
 
 One volume, carved into three subpaths that are mounted into different containers.
 
-| Subpath             | Mounted at                   | In                                             | Purpose                                |
-| ------------------- | ---------------------------- | ---------------------------------------------- | -------------------------------------- |
-| `mysql/`            | `/var/lib/mysql`             | `database-sub`                                 | All three databases                    |
-| `data/`             | `/azerothcore/env/dist/data` | `client-data-sub` (rw), `worldserver-sub` (ro) | Maps, vmaps, mmaps, DBC                |
-| `start9/store.json` | —                            | package-internal                               | Database password, realm name, address |
+| Subpath             | Mounted at                   | In                                             | Purpose                                 |
+| ------------------- | ---------------------------- | ---------------------------------------------- | --------------------------------------- |
+| `mysql/`            | `/var/lib/mysql`             | `database-sub`                                 | All three databases                     |
+| `data/`             | `/azerothcore/env/dist/data` | `client-data-sub` (rw), `worldserver-sub` (ro) | Maps, vmaps, mmaps, DBC                 |
+| `start9/store.json` | —                            | package-internal                               | Database passwords, realm name, address |
 
 The world server mounts `data/` **read-only**, so only the download oneshot can write it — a corrupted map set comes from a failed download, never from the running server.
 
@@ -72,13 +73,14 @@ The client data is the bulk of the volume, and it is downloaded rather than ship
 
 ## File Models
 
-One model, `store.json`, holding the three values the package decides on the user's behalf.
+One model, `store.json`, holding the four values the package decides on the user's behalf.
 
 | File                | Format | Modelled                | Written by                            |
 | ------------------- | ------ | ----------------------- | ------------------------------------- |
 | `start9/store.json` | JSON   | Yes — `FileHelper.json` | Init and the Set Realm Address action |
 
-- **`dbPassword`** — generated once at install and never shown. It is MySQL's root password and is passed to every container that talks to the database. Nothing regenerates it, because rotating it would leave the existing data directory unopenable.
+- **`dbPassword`** — generated once at install and never shown. It is MySQL's root password, used by `db-import`, `realm-config`, `db-user` and the actions. Nothing regenerates it, because rotating it would leave the existing data directory unopenable.
+- **`serverDbPassword`** — generated on the first init that finds it empty and never shown. It is the password of the `acore` MySQL account (`'acore'@'127.0.0.1'`, all privileges on the AzerothCore databases and nothing else), the only account the auth and world servers are given. The `db-user` oneshot sets the account to it on every start.
 - **`realmName`** — the realm's display name in the client's realm list. Defaults to `AzerothCore`.
 - **`realmAddress`** — the address written into the realm list. Empty means "resolve one automatically", which is the default; [Set Realm Address](#actions) fills it in.
 
@@ -111,9 +113,9 @@ MySQL listens on 3306 inside the service and is never exported.
 
 Install generates the database password and seeds the store; everything else happens on the first start, in a fixed order.
 
-The boot chain is `database` → `client-data` → `db-import` → `realm-config` → `authserver` and `worldserver`, wired with `requires` rather than with sleeps. Two of those steps are slow exactly once:
+The boot chain is `database` → `client-data` → `db-import` → `realm-config` and `db-user` → `authserver` and `worldserver`, wired with `requires` rather than with sleeps. Two of those steps are slow exactly once:
 
-1. **`client-data`** downloads and extracts the map data. It is idempotent — it checks for the DBC directory and skips the download if it is already there — so this cost is paid on first boot and never again.
+1. **`client-data`** downloads the map data release the pinned client-data image names (`wowgaming/client-data` `v19`), refuses it unless its SHA-256 matches the one pinned in `startos/main.ts`, and extracts it. It skips the download once `data/data-version` records that release, so the cost is paid on first boot and again only after switching from the other flavor, whose data release differs. A refused download is deleted and retried, and the world server never starts on it.
 2. **`db-import`** creates the three databases and applies upstream's schema and world data.
 
 Then `realm-config` resolves the realm address and writes it into `acore_auth.realmlist`, and the two game daemons come up. First boot therefore takes minutes with the World Server check reporting "loading" throughout; subsequent starts take seconds.
@@ -204,6 +206,7 @@ subcontainers:
   - client-data-sub # oneshot
   - db-import-sub # oneshot
   - realm-config-sub # oneshot
+  - db-user-sub # oneshot
 volumes:
   main:
     mysql: /var/lib/mysql
@@ -218,8 +221,9 @@ startos_managed_env_vars:
   - AC_WARDEN_ENABLED
 secret_files: # 0600, written into the subcontainer rootfs, never in argv
   /etc/mysql-root-pw: MYSQL_ROOT_PASSWORD_FILE # database
-  /etc/mysql-client.cnf: --defaults-extra-file # realm-config
-  /etc/ac-db.env: sourced by the command # AC_*_DATABASE_INFO
+  /etc/mysql-client.cnf: --defaults-extra-file # realm-config, db-user
+  /etc/ac-db-user.sql: sourced by mysql # db-user
+  /etc/ac-db.env: sourced by the command # AC_*_DATABASE_INFO; root for db-import, acore for the servers
 dependencies: []
 interfaces:
   authserver: { type: p2p, port: 3724 }
