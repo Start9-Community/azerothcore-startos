@@ -30,3 +30,15 @@ to ship.
 2. Update the pinned `<tag>@sha256:<digest>` constants in
    `startos/manifest/index.ts` (`MYSQL`, `AC_AUTHSERVER`, `AC_WORLDSERVER`,
    `AC_DB_IMPORT`, `AC_CLIENT_DATA`).
+
+3. Check the client-data release the new `ac-wotlk-client-data` image downloads:
+   `VERSION=` in `inst_download_client_data`
+   (`apps/installer/includes/functions.sh` in upstream's source at the image's
+   build). If it changed, set `CLIENT_DATA_VERSION` in `startos/main.ts` to it
+   and `CLIENT_DATA_SHA256` to its `Data.zip` digest, then confirm the digest
+   against the downloaded file:
+
+   ```sh
+   gh api repos/wowgaming/client-data/releases/tags/<version> --jq '.assets[].digest'
+   curl -fsSL https://github.com/wowgaming/client-data/releases/download/<version>/data.zip | sha256sum
+   ```
