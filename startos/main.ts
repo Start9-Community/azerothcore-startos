@@ -52,8 +52,7 @@ const MYSQL_PW_FILE = '/etc/mysql-root-pw'
 const MYSQL_CNF = '/etc/mysql-client.cnf'
 const DB_USER_SQL = '/etc/ac-db-user.sql'
 
-// The MySQL account the auth and world servers use, limited to the AzerothCore
-// databases. db-import keeps root: it creates the databases.
+// The game-server account may access only the literal databases in `dbName`.
 const serverDbUser = 'acore'
 const serverDbAccount = `'${serverDbUser}'@'127.0.0.1'`
 
@@ -145,8 +144,11 @@ export const main = sdk.setupMain(async ({ effects }) => {
     [
       `CREATE USER IF NOT EXISTS ${serverDbAccount} IDENTIFIED BY '${store.serverDbPassword}';`,
       `ALTER USER ${serverDbAccount} IDENTIFIED BY '${store.serverDbPassword}';`,
+      `REVOKE ALL PRIVILEGES, GRANT OPTION FROM ${serverDbAccount};`,
+      // Database-level GRANT treats unescaped underscores as wildcards.
       ...Object.values(dbName).map(
-        (db) => `GRANT ALL PRIVILEGES ON \`${db}\`.* TO ${serverDbAccount};`,
+        (db) =>
+          `GRANT ALL PRIVILEGES ON \`${db.replace(/_/g, '\\_')}\`.* TO ${serverDbAccount};`,
       ),
     ].join('\n') + '\n'
 
