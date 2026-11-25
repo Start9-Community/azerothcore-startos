@@ -29,3 +29,15 @@ published tag to ship, then resolve its digest:
 docker buildx imagetools inspect acore/ac-wotlk-client-data:<tag> --format '{{json .Manifest}}' | jq -r .digest
 docker buildx imagetools inspect mysql:8.4 --format '{{json .Manifest}}' | jq -r .digest
 ```
+
+When `AC_CLIENT_DATA` moves, check the client-data release the new image
+downloads: `VERSION=` in `inst_download_client_data`
+(`apps/installer/includes/functions.sh` in upstream's source at the image's
+build). If it changed, set `CLIENT_DATA_VERSION` in `startos/main.ts` to it and
+`CLIENT_DATA_SHA256` to its `Data.zip` digest, then confirm the digest against
+the downloaded file:
+
+```sh
+gh api repos/wowgaming/client-data/releases/tags/<version> --jq '.assets[].digest'
+curl -fsSL https://github.com/wowgaming/client-data/releases/download/<version>/data.zip | sha256sum
+```
