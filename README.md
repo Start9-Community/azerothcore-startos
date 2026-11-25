@@ -80,7 +80,7 @@ One model, `store.json`, holding the four values the package decides on the user
 | `start9/store.json` | JSON   | Yes — `FileHelper.json` | Init and the Set Realm Address action |
 
 - **`dbPassword`** — generated once at install and never shown. It is MySQL's root password, used by `db-import`, `realm-config`, `db-user` and the actions. Nothing regenerates it, because rotating it would leave the existing data directory unopenable.
-- **`serverDbPassword`** — generated on the first init that finds it empty and never shown. It is the password of the `acore` MySQL account (`'acore'@'127.0.0.1'`, all privileges on the AzerothCore databases and nothing else), the only account the auth and world servers are given. The `db-user` oneshot sets the account to it on every start.
+- **`serverDbPassword`** — generated on the first init that finds it empty and never shown. It is the password of the `acore` MySQL account (`'acore'@'127.0.0.1'`, all privileges on the AzerothCore databases and nothing else), the only account the auth and world servers are given. The `db-user` oneshot sets the account to it, and replaces its grants with exactly those databases, on every start.
 - **`realmName`** — the realm's display name in the client's realm list. Defaults to `AzerothCore`.
 - **`realmAddress`** — the address written into the realm list. Empty means "resolve one automatically", which is the default; [Set Realm Address](#actions) fills it in.
 
