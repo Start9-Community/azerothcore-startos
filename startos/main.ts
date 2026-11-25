@@ -14,17 +14,30 @@ import {
 const dbGracePeriod = 30_000
 const worldGracePeriod = 120_000 // first boot loads maps + DB, can be slow
 
-// Client-data download. `inst_download_client_data` is itself idempotent and
-// version-aware: it compares its pinned data version against INSTALLED_VERSION
-// in `data/data-version` (which lives in the `main` volume) and returns early
-// when they match. Don't guard this on the data directory merely existing --
-// upstream bumps the data version when the map format changes (v19 -> v20 for
-// MMAP_VERSION 20), and a presence check would leave an upgraded install
-// running the new worldserver against stale mmaps it rejects.
+// The wowgaming/client-data release the pinned client-data image's own
+// downloader names (see UPDATING.md), and its Data.zip digest. Don't guard the
+// download on the data directory merely existing: the release changes with the
+// map format (v19 -> v20 for MMAP_VERSION 20), and the worldserver rejects
+// stale mmaps.
+const CLIENT_DATA_VERSION = 'v20.0'
+const CLIENT_DATA_SHA256 =
+  'a3d4df635ae6c2c8f08052c32a79e0f806955150ad36b014a823dd08a32a4610'
 const CLIENT_DATA_CMD: [string, ...string[]] = [
   'bash',
   '-c',
-  'source /azerothcore/apps/installer/includes/functions.sh && inst_download_client_data',
+  `set -euo pipefail
+d=/azerothcore/env/dist/data
+if grep -qsx 'INSTALLED_VERSION=${CLIENT_DATA_VERSION}' "$d/data-version"; then
+  echo "client data ${CLIENT_DATA_VERSION} present, skipping"; exit 0
+fi
+echo "downloading client data ${CLIENT_DATA_VERSION}"
+curl -fsSL -o "$d/data.zip" https://github.com/wowgaming/client-data/releases/download/${CLIENT_DATA_VERSION}/data.zip
+if ! echo "${CLIENT_DATA_SHA256}  $d/data.zip" | sha256sum -c -; then
+  rm -f "$d/data.zip"; exit 1
+fi
+unzip -q -o "$d/data.zip" -d "$d/"
+rm "$d/data.zip"
+echo 'INSTALLED_VERSION=${CLIENT_DATA_VERSION}' > "$d/data-version"`,
 ]
 
 // Secrets must never travel through `exec.env`. The SDK turns every entry into
@@ -37,6 +50,11 @@ const CLIENT_DATA_CMD: [string, ...string[]] = [
 const AC_DB_ENV = '/etc/ac-db.env'
 const MYSQL_PW_FILE = '/etc/mysql-root-pw'
 const MYSQL_CNF = '/etc/mysql-client.cnf'
+const DB_USER_SQL = '/etc/ac-db-user.sql'
+
+// The game-server account may access only the literal databases in `dbName`.
+const serverDbUser = 'acore'
+const serverDbAccount = `'${serverDbUser}'@'127.0.0.1'`
 
 // Matches DOCKER_USER in Dockerfile.playerbots, which the image's USER sets.
 const acoreUser = 'acore'
@@ -101,22 +119,38 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // The mysql image resolves MYSQL_ROOT_PASSWORD from a *_FILE variant
   // (file_env in its docker-entrypoint.sh), so only the path is passed.
   const dbEnv = { MYSQL_ROOT_PASSWORD_FILE: MYSQL_PW_FILE }
-  const conn = (name: string) =>
-    `127.0.0.1;${dbPort};root;${store.dbPassword};${name}`
+  const dbEnvFile = (user: string, password: string) =>
+    Object.entries({
+      AC_LOGIN_DATABASE_INFO: dbName.auth,
+      AC_WORLD_DATABASE_INFO: dbName.world,
+      AC_CHARACTER_DATABASE_INFO: dbName.characters,
+      AC_PLAYERBOTS_DATABASE_INFO: dbName.playerbots,
+    })
+      .map(
+        ([k, db]) =>
+          `export ${k}='127.0.0.1;${dbPort};${user};${password};${db}'`,
+      )
+      .join('\n') + '\n'
 
   // Sourced from AC_DB_ENV rather than passed as env. Single quotes are safe:
-  // dbPassword is generated from `a-z,A-Z,0-9` (see init/initializeService.ts),
-  // so it cannot contain a quote, and the values' own `;` separators would
-  // otherwise be read as shell command separators.
-  const acDbEnvFile =
-    Object.entries({
-      AC_LOGIN_DATABASE_INFO: conn(dbName.auth),
-      AC_WORLD_DATABASE_INFO: conn(dbName.world),
-      AC_CHARACTER_DATABASE_INFO: conn(dbName.characters),
-      AC_PLAYERBOTS_DATABASE_INFO: conn(dbName.playerbots),
-    })
-      .map(([k, v]) => `export ${k}='${v}'`)
-      .join('\n') + '\n'
+  // both passwords are generated from `a-z,A-Z,0-9` (see
+  // init/initializeService.ts), so they cannot contain a quote, and the values'
+  // own `;` separators would otherwise be read as shell command separators.
+  const importDbEnvFile = dbEnvFile('root', store.dbPassword)
+  const serverDbEnvFile = dbEnvFile(serverDbUser, store.serverDbPassword)
+
+  // Every start, so the account always matches store.json.
+  const dbUserSqlFile =
+    [
+      `CREATE USER IF NOT EXISTS ${serverDbAccount} IDENTIFIED BY '${store.serverDbPassword}';`,
+      `ALTER USER ${serverDbAccount} IDENTIFIED BY '${store.serverDbPassword}';`,
+      `REVOKE ALL PRIVILEGES, GRANT OPTION FROM ${serverDbAccount};`,
+      // Database-level GRANT treats unescaped underscores as wildcards.
+      ...Object.values(dbName).map(
+        (db) =>
+          `GRANT ALL PRIVILEGES ON \`${db.replace(/_/g, '\\_')}\`.* TO ${serverDbAccount};`,
+      ),
+    ].join('\n') + '\n'
 
   const mysqlCnfFile = `[client]\npassword=${store.dbPassword}\n`
 
@@ -231,6 +265,15 @@ export const main = sdk.setupMain(async ({ effects }) => {
   )
   await writeSecret(realmConfigSub, MYSQL_CNF, mysqlCnfFile)
 
+  const dbUserSub = sdk.SubContainer.of(
+    effects,
+    { imageId: 'database' },
+    null,
+    'db-user-sub',
+  )
+  await writeSecret(dbUserSub, MYSQL_CNF, mysqlCnfFile)
+  await writeSecret(dbUserSub, DB_USER_SQL, dbUserSqlFile)
+
   // The acore image runs as `acore`, so the sourced file must be chowned to it.
   const dbImportSub = sdk.SubContainer.of(
     effects,
@@ -238,7 +281,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
     null,
     'db-import-sub',
   )
-  await writeSecret(dbImportSub, AC_DB_ENV, acDbEnvFile, acoreUser)
+  await writeSecret(dbImportSub, AC_DB_ENV, importDbEnvFile, acoreUser)
 
   const authserverSub = sdk.SubContainer.of(
     effects,
@@ -246,7 +289,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
     null,
     'authserver-sub',
   )
-  await writeSecret(authserverSub, AC_DB_ENV, acDbEnvFile, acoreUser)
+  await writeSecret(authserverSub, AC_DB_ENV, serverDbEnvFile, acoreUser)
 
   const worldserverSub = sdk.SubContainer.of(
     effects,
@@ -259,7 +302,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
     }),
     'worldserver-sub',
   )
-  await writeSecret(worldserverSub, AC_DB_ENV, acDbEnvFile, acoreUser)
+  await writeSecret(worldserverSub, AC_DB_ENV, serverDbEnvFile, acoreUser)
 
   return (
     sdk.Daemons.of(effects)
@@ -314,17 +357,22 @@ export const main = sdk.setupMain(async ({ effects }) => {
         exec: mysqlExec(realmSql),
         requires: ['db-import'],
       })
+      .addOneshot('db-user', {
+        subcontainer: dbUserSub,
+        exec: mysqlExec(`source ${DB_USER_SQL}`),
+        requires: ['database'],
+      })
       .addDaemon('authserver', {
         subcontainer: authserverSub,
         exec: exec('authserver'),
         ready: authReady,
-        requires: ['realm-config'],
+        requires: ['realm-config', 'db-user'],
       })
       .addDaemon('worldserver', {
         subcontainer: worldserverSub,
         exec: exec('worldserver'),
         ready: worldReady,
-        requires: ['db-import', 'client-data', 'create-dbs'],
+        requires: ['db-import', 'client-data', 'create-dbs', 'db-user'],
       })
   )
 })

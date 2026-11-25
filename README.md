@@ -45,15 +45,16 @@ Three images. Two are upstream's, pinned by digest, and `client-data` is built o
 | Architectures | x86_64 only                                                 |
 | Entrypoint    | The fork image's entrypoint, given a binary name per role   |
 
-| Subcontainer       | Image         | Kind    | Purpose                                                     |
-| ------------------ | ------------- | ------- | ----------------------------------------------------------- |
-| `database-sub`     | `database`    | daemon  | MySQL, holding all four databases                           |
-| `authserver-sub`   | `acore`       | daemon  | Login and realm list                                        |
-| `worldserver-sub`  | `acore`       | daemon  | The game world and the bots — attach here for gameplay logs |
-| `client-data-sub`  | `client-data` | oneshot | Downloads maps, vmaps, mmaps and DBC on first boot          |
-| `create-dbs-sub`   | `database`    | oneshot | Creates all four databases up front                         |
-| `db-import-sub`    | `acore`       | oneshot | Populates and upgrades the four databases                   |
-| `realm-config-sub` | `database`    | oneshot | Writes this realm's address into `acore_auth.realmlist`     |
+| Subcontainer       | Image         | Kind    | Purpose                                                                |
+| ------------------ | ------------- | ------- | ---------------------------------------------------------------------- |
+| `database-sub`     | `database`    | daemon  | MySQL, holding all four databases                                      |
+| `authserver-sub`   | `acore`       | daemon  | Login and realm list                                                   |
+| `worldserver-sub`  | `acore`       | daemon  | The game world and the bots — attach here for gameplay logs            |
+| `client-data-sub`  | `client-data` | oneshot | Downloads maps, vmaps, mmaps and DBC, checked against a pinned SHA-256 |
+| `create-dbs-sub`   | `database`    | oneshot | Creates all four databases up front                                    |
+| `db-import-sub`    | `acore`       | oneshot | Populates and upgrades the four databases                              |
+| `realm-config-sub` | `database`    | oneshot | Writes this realm's address into `acore_auth.realmlist`                |
+| `db-user-sub`      | `database`    | oneshot | Creates the `acore` MySQL account the auth and world servers use       |
 
 **Playerbots is a fork, not a loadable module**, so the auth server, world server and database importer all come from one image compiled from the fork's source rather than from upstream's three prebuilt ones. The role is selected per container by the binary passed to the shared entrypoint. That compile is why a first build of this package is slow where the vanilla flavor's is not.
 
@@ -61,11 +62,11 @@ Three images. Two are upstream's, pinned by digest, and `client-data` is built o
 
 One volume, carved into three subpaths that are mounted into different containers.
 
-| Subpath             | Mounted at                   | In                                             | Purpose                                         |
-| ------------------- | ---------------------------- | ---------------------------------------------- | ----------------------------------------------- |
-| `mysql/`            | `/var/lib/mysql`             | `database-sub`                                 | All four databases                              |
-| `data/`             | `/azerothcore/env/dist/data` | `client-data-sub` (rw), `worldserver-sub` (ro) | Maps, vmaps, mmaps, DBC                         |
-| `start9/store.json` | —                            | package-internal                               | Database password, realm settings, bot settings |
+| Subpath             | Mounted at                   | In                                             | Purpose                                          |
+| ------------------- | ---------------------------- | ---------------------------------------------- | ------------------------------------------------ |
+| `mysql/`            | `/var/lib/mysql`             | `database-sub`                                 | All four databases                               |
+| `data/`             | `/azerothcore/env/dist/data` | `client-data-sub` (rw), `worldserver-sub` (ro) | Maps, vmaps, mmaps, DBC                          |
+| `start9/store.json` | —                            | package-internal                               | Database passwords, realm settings, bot settings |
 
 The world server mounts `data/` **read-only**, so only the download oneshot can write it — a corrupted map set comes from a failed download, never from the running server.
 
@@ -79,7 +80,8 @@ One model, `store.json`, holding everything the package decides on the user's be
 | ------------------- | ------ | ----------------------- | ---------------------------------------- |
 | `start9/store.json` | JSON   | Yes — `FileHelper.json` | Init and the three configuration actions |
 
-- **`dbPassword`** — generated once at install and never shown. It is MySQL's root password. Nothing regenerates it, because rotating it would leave the existing data directory unopenable.
+- **`dbPassword`** — generated once at install and never shown. It is MySQL's root password, used by `create-dbs`, `db-import`, `realm-config`, `db-user` and the actions. Nothing regenerates it, because rotating it would leave the existing data directory unopenable.
+- **`serverDbPassword`** — generated on the first init that finds it empty and never shown. It is the password of the `acore` MySQL account (`'acore'@'127.0.0.1'`, all privileges on the four AzerothCore databases and nothing else), the only account the auth and world servers are given. The `db-user` oneshot sets the account to it, and replaces its grants with exactly those databases, on every start.
 - **`realmName`** — the realm's display name in the client's realm list.
 - **`realmAddress`** — the address written into the realm list. Empty means "resolve one automatically", which is the default.
 - **`playerbots`** — `enabled`, `minBots`, `maxBots`. Written by [Playerbots Settings](#actions).
@@ -114,9 +116,9 @@ MySQL listens on 3306 inside the service and is never exported.
 
 Install generates the database password and seeds the store; everything else happens on the first start, in a fixed order.
 
-The boot chain is `database` → `client-data` → `create-dbs` → `db-import` → `realm-config` → `authserver` and `worldserver`, wired with `requires` rather than with sleeps. Three of those steps matter to a first boot:
+The boot chain is `database` → `client-data` → `create-dbs` → `db-import` → `realm-config` and `db-user` → `authserver` and `worldserver`, wired with `requires` rather than with sleeps. Three of those steps matter to a first boot:
 
-1. **`client-data`** downloads and extracts the map data. It is idempotent and version-aware — upstream's downloader compares its pinned data version against `INSTALLED_VERSION` in `data/data-version` and returns early when they match — so the cost is paid on first boot, and again only when upstream bumps the data version because the map format changed.
+1. **`client-data`** downloads the map data release the pinned client-data image names (`wowgaming/client-data` `v20.0`), refuses it unless its SHA-256 matches the one pinned in `startos/main.ts`, and extracts it. It skips the download once `data/data-version` records that release, so the cost is paid on first boot, and again only when the pinned release changes with the map format or after switching from the other flavor. A refused download is deleted and retried, and the world server never starts on it.
 2. **`create-dbs`** creates all four databases explicitly. The fork's own auto-create only makes the first one, so without this step `db-import` finds nothing to populate.
 3. **`db-import`** applies upstream's schema and world data, plus the fork's bot schema. It runs with database migrations enabled across all four; the long-running daemons run with them **disabled**, so only this one step can ever alter the schema.
 
@@ -234,6 +236,7 @@ subcontainers:
   - create-dbs-sub # oneshot
   - db-import-sub # oneshot
   - realm-config-sub # oneshot
+  - db-user-sub # oneshot
 volumes:
   main:
     mysql: /var/lib/mysql
@@ -252,8 +255,9 @@ startos_managed_env_vars:
   - AC_* # one flag per optional module
 secret_files: # 0600, written into the subcontainer rootfs, never in argv
   /etc/mysql-root-pw: MYSQL_ROOT_PASSWORD_FILE # database
-  /etc/mysql-client.cnf: --defaults-extra-file # create-dbs, realm-config
-  /etc/ac-db.env: sourced by the command # AC_*_DATABASE_INFO
+  /etc/mysql-client.cnf: --defaults-extra-file # create-dbs, realm-config, db-user
+  /etc/ac-db-user.sql: sourced by mysql # db-user
+  /etc/ac-db.env: sourced by the command # AC_*_DATABASE_INFO; root for db-import, acore for the servers
 dependencies: []
 interfaces:
   authserver: { type: p2p, port: 3724 }

@@ -9,6 +9,8 @@ export const defaultRealmName = 'AzerothCore'
 const storeConfigSchema = z.looseObject({
   // Generated once at install, root password for the bundled MySQL.
   dbPassword: z.string().catch(''),
+  // Password of the `acore` MySQL account the auth and world servers use.
+  serverDbPassword: z.string().catch(''),
   // Display name of the realm shown in the client's realm list.
   realmName: z.string().catch(defaultRealmName),
   // The address written into the realm list (what clients connect to for the
